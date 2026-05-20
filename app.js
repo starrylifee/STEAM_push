@@ -261,6 +261,7 @@ class AppController {
         
         this.setupNavigation();
         this.setupModal();
+        this.setupAISystem();
     }
 
     setupNavigation() {
@@ -307,6 +308,192 @@ class AppController {
                 this.closeWorksheetModal();
             }
         });
+    }
+
+    setupAISystem() {
+        // AI Settings Modal Elements
+        this.aiSettingsBtn = document.getElementById('ai-settings-btn');
+        this.aiSettingsModal = document.getElementById('ai-settings-modal');
+        this.closeAiSettingsBtn = document.getElementById('close-ai-settings-btn');
+        this.saveAiSettingsBtn = document.getElementById('save-ai-settings-btn');
+        this.openaiApiKeyInput = document.getElementById('openai-api-key-input');
+
+        // AI Chatbot Elements
+        this.aiChatToggleBtn = document.getElementById('ai-chat-toggle-btn');
+        this.aiChatContainer = document.getElementById('ai-chat-container');
+        this.aiChatCloseBtn = document.getElementById('ai-chat-close-btn');
+        this.aiChatInput = document.getElementById('ai-chat-input');
+        this.aiChatSendBtn = document.getElementById('ai-chat-send-btn');
+        this.aiChatMessages = document.getElementById('ai-chat-messages');
+
+        // Pre-fill key on mount
+        const savedKey = localStorage.getItem('openai_api_key');
+        if (savedKey) {
+            this.openaiApiKeyInput.value = savedKey;
+        }
+
+        // Bind settings events
+        if (this.aiSettingsBtn) {
+            this.aiSettingsBtn.addEventListener('click', () => {
+                this.aiSettingsModal.classList.add('active');
+                sound.playSelect();
+            });
+        }
+        if (this.closeAiSettingsBtn) {
+            this.closeAiSettingsBtn.addEventListener('click', () => {
+                this.aiSettingsModal.classList.remove('active');
+                sound.playSelect();
+            });
+        }
+        if (this.aiSettingsModal) {
+            this.aiSettingsModal.addEventListener('click', (e) => {
+                if (e.target === this.aiSettingsModal) {
+                    this.aiSettingsModal.classList.remove('active');
+                }
+            });
+        }
+        if (this.saveAiSettingsBtn) {
+            this.saveAiSettingsBtn.addEventListener('click', () => {
+                const key = this.openaiApiKeyInput.value.trim();
+                localStorage.setItem('openai_api_key', key);
+                this.aiSettingsModal.classList.remove('active');
+                sound.playSuccess();
+                alert('AI 마법 튜터 설정이 안전하게 브라우저 저장소에 저장되었습니다! 🧙‍♂️✨');
+            });
+        }
+
+        // Bind chat events
+        if (this.aiChatToggleBtn) {
+            this.aiChatToggleBtn.addEventListener('click', () => {
+                const isHidden = this.aiChatContainer.classList.toggle('hidden');
+                sound.playSelect();
+                if (!isHidden) {
+                    this.aiChatInput.focus();
+                    this.scrollToBottom();
+                }
+            });
+        }
+        if (this.aiChatCloseBtn) {
+            this.aiChatCloseBtn.addEventListener('click', () => {
+                this.aiChatContainer.classList.add('hidden');
+                sound.playSelect();
+            });
+        }
+        if (this.aiChatSendBtn) {
+            this.aiChatSendBtn.addEventListener('click', () => this.handleUserChatMessage());
+        }
+        if (this.aiChatInput) {
+            this.aiChatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.handleUserChatMessage();
+                }
+            });
+        }
+    }
+
+    scrollToBottom() {
+        if (this.aiChatMessages) {
+            this.aiChatMessages.scrollTop = this.aiChatMessages.scrollHeight;
+        }
+    }
+
+    async handleUserChatMessage() {
+        const text = this.aiChatInput.value.trim();
+        if (!text) return;
+
+        this.aiChatInput.value = '';
+        sound.playSelect();
+
+        // 1. Render User Message
+        this.appendMessage('user', text);
+        this.scrollToBottom();
+
+        // 2. Render Typing Indicator
+        const indicator = this.showTypingIndicator();
+        this.scrollToBottom();
+
+        // 3. Check for API key
+        const apiKey = localStorage.getItem('openai_api_key');
+        if (!apiKey) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            indicator.remove();
+            this.appendMessage('bot', '안녕! 🧙‍♂️ 오즈의 실시간 AI 마법 답변을 경험하려면 상단의 **[⚙️ AI 설정]** 버튼을 클릭해서 OpenAI API 키를 먼저 등록해 줘! 키를 입력하면 내가 항상 1초 만에 재미있게 힌트를 줄 수 있어! 📐✨');
+            this.scrollToBottom();
+            return;
+        }
+
+        // 4. Call OpenAI API
+        try {
+            const systemPrompt = "당신은 초등학교 4학년 학생들이 도형의 밀기(평행이동) 개념을 배울 때 친절하게 안내하고 힌트를 주는 다정한 마법사 수학 튜터 '오즈(OZ)'입니다. 4학년 수준에 맞게 격려가 넘치고 쉬운 수학 설명과 이모지(📐, 🔮, ✨, 🧙‍♂️)를 가득 사용해서 3문장 이내로 다정하게 답해 주세요. 한국어로 작성하며, 아주 사랑스럽고 격려하는 반말(~했어?, ~해보자!)로 친근하게 학생을 맞이해 주세요. 수학 및 도형 평행이동에 관련 없는 질문이라도 재미있게 도형 밀기 얘기로 유도해 주세요.";
+            
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: text }
+                    ],
+                    max_tokens: 250,
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error?.message || `HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const reply = data.choices[0].message.content.trim();
+            
+            indicator.remove();
+            this.appendMessage('bot', reply);
+            sound.playSuccess();
+        } catch (error) {
+            console.error('OpenAI API Error:', error);
+            indicator.remove();
+            this.appendMessage('bot', `이런! 마법 통신에 장애가 생겼어. 😭 API 키가 올바른지, 혹은 만료되었는지 **[⚙️ AI 설정]**에서 확인해 줄래? 에러 내용: ${error.message}`);
+        }
+        this.scrollToBottom();
+    }
+
+    appendMessage(sender, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${sender}`;
+        
+        const avatar = sender === 'bot' ? '<div class="message-avatar">🧙‍♂️</div>' : '';
+        const markdownFormatted = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>');
+
+        msgDiv.innerHTML = `
+            ${avatar}
+            <div class="message-content">${markdownFormatted}</div>
+        `;
+        this.aiChatMessages.appendChild(msgDiv);
+    }
+
+    showTypingIndicator() {
+        const indDiv = document.createElement('div');
+        indDiv.className = 'chat-message bot typing';
+        indDiv.id = 'ai-typing-indicator';
+        indDiv.innerHTML = `
+            <div class="message-avatar">🧙‍♂️</div>
+            <div class="message-content">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+        `;
+        this.aiChatMessages.appendChild(indDiv);
+        return indDiv;
     }
 
     loadGame(gameId) {
@@ -2115,6 +2302,8 @@ class GameDollShop {
         this.gameState = 'assemble';
         this.activePartIndex = 0;
         this.sewingProgress = 0;
+        this.assemblyErrors = 0;
+        this.sewingErrors = 0;
         
         const data = this.partsData[this.level];
         this.statusVal1.textContent = data.name;
@@ -2324,6 +2513,7 @@ class GameDollShop {
         } else {
             // Incorrect shift translation
             sound.playFailure();
+            this.assemblyErrors++;
             
             const reqDx = p.correctShift.dx - p.currentShift.dx;
             const reqDy = p.correctShift.dy - p.currentShift.dy;
@@ -2407,6 +2597,7 @@ class GameDollShop {
         } else {
             // Incorrect needle direction vector
             sound.playFailure();
+            this.sewingErrors++;
             this.showToast("실바늘의 바느질 대각선 밀기 방향이 다릅니다! 침착히 대각선 벡터를 다시 골라주세요!");
         }
     }
@@ -2435,48 +2626,113 @@ class GameDollShop {
         ctx.stroke();
     }
 
-    triggerAIEvaluation() {
+    async triggerAIEvaluation() {
         sound.playMove();
         
         const scoreLabel = document.getElementById('ai-score-label');
         let ticks = 0;
         
-        const interval = setInterval(() => {
+        // 1. Start loading animation (AI face blinking and thinking state)
+        const loadingInterval = setInterval(() => {
             ticks++;
             const mockScore = Math.floor(Math.random() * 50) + 50;
-            scoreLabel.textContent = `AI 채점: ${mockScore}점`;
+            scoreLabel.textContent = `AI 분석 연산 중... (${mockScore}점)`;
             
             const expressions = [
-                'M 30 50 Q 50 60 70 50',
-                'M 35 60 Q 50 50 65 60',
-                'M 35 55 Q 50 65 65 55',
-                'M 30 45 L 70 45'
+                'M 30 50 Q 50 60 70 50', // neutral
+                'M 35 60 Q 50 50 65 60', // sad
+                'M 35 55 Q 50 65 65 55', // smile
+                'M 30 45 L 70 45'        // straight
             ];
             this.aiExpression.setAttribute('d', expressions[Math.floor(Math.random() * expressions.length)]);
-            
         }, 100);
 
-        setTimeout(() => {
-            clearInterval(interval);
-            
-            const finalScore = Math.floor(Math.random() * 30) + 70; // 70 to 100
-            scoreLabel.textContent = `AI 채점: ${finalScore}점`;
-            this.aiExpression.setAttribute('d', 'M 35 55 Q 50 65 65 55'); // Smile happy face
-            
-            sound.playWin();
+        // 2. Compute the dynamic performance score (at least 60)
+        const finalScore = Math.max(60, 100 - (this.assemblyErrors + this.sewingErrors) * 10);
+        const apiKey = localStorage.getItem('openai_api_key');
+        
+        let aiFeedbackText = "";
+        let isOnline = false;
 
-            this.showOverlay(true, `축하합니다! AI 채점결과 "${finalScore}점"을 획득하여 완벽하게 정밀 격자 바느질 수리에 대성공하였습니다! 🎉🧸`, () => {
-                if (this.level < this.maxLevel) {
-                    this.level++;
-                    this.initLevel();
+        // 3. Query OpenAI API if key exists
+        if (apiKey) {
+            try {
+                const systemPrompt = `당신은 초등 수학 교과 과정(4학년 1학기 평행이동 '도형 밀기' 단원)을 기반으로 게임을 채점하고 피드백을 주는 귀여운 TV-head 형태의 레트로 인공지능 로봇 튜터 '티비봇'입니다. 학생의 인형 조립 밀기 실수(assembly errors: ${this.assemblyErrors}회)와 대각선 벡터 바느질 실수(sewing errors: ${this.sewingErrors}회), 그리고 최종 점수(${finalScore}점)를 분석하여 매우 유쾌하고 칭찬이 가득한 격려의 로봇 진단 평가를 한국어로 내려주세요. 말투는 반드시 귀엽고 통통 튀는 레트로 로봇 말투('~다봇!', '삐리빅!', '연산 완료!', '업그레이드 완료!')를 써야 합니다. 초등학생 대상이므로 평행이동(밀기) 개념을 칭찬하거나 지지해주어야 하며, 딱딱한 말투를 지양하고 이모지와 친근한 표현을 잔뜩 넣어주세요. 줄바꿈을 포함하여 3문장 이내로 작성해 주세요.`;
+                
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: `조립 밀기 실수: ${this.assemblyErrors}회, 바느질 실수: ${this.sewingErrors}회, 최종 점수: ${finalScore}점.` }
+                        ],
+                        max_tokens: 250,
+                        temperature: 0.7
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    aiFeedbackText = data.choices[0].message.content.trim();
+                    isOnline = true;
                 } else {
-                    this.showOverlay(true, "대단해요! 진라면 학생이 디자인한 곰돌이와 토끼 인형들을 격자 평행이동 밀기 조립과 대각선 봉합으로 모두 완벽히 치료했습니다! 🏆💖", () => {
-                        app.showDashboard();
-                    }, "메인으로");
+                    console.warn('API response error, falling back to offline diagnostic.');
                 }
-            });
+            } catch (error) {
+                console.error('AI Diagnostic Error:', error);
+            }
+        }
 
-        }, 1500);
+        // 4. Offline Fallback Mode
+        if (!isOnline) {
+            aiFeedbackText = `삐리빅! 로컬 임시 연산 장치 가동! 🛠️ 조립 실수 ${this.assemblyErrors}회, 바느질 실수 ${this.sewingErrors}회로 정밀 복원을 완료했다봇! 평행이동과 대각선 바느질의 규칙을 멋지게 실천했다봇, 삐리빅! ⚙️<br><br>🧙‍♂️ 화면 우측 상단의 <strong>[⚙️ AI 설정]</strong>을 누르고 OpenAI API Key를 등록하면, 티비봇과 오즈 쌤의 훨씬 더 똑똑하고 따뜻한 실시간 AI 수학 진단 코칭 카드를 받을 수 있다봇! 꼭 등록해줘봇!`;
+        }
+
+        // 5. Stop loading animation & update UI
+        clearInterval(loadingInterval);
+        
+        scoreLabel.textContent = `AI 채점: ${finalScore}점`;
+        this.aiExpression.setAttribute('d', 'M 35 55 Q 50 65 65 55'); // Happy face
+        sound.playWin();
+
+        const diagHTML = `
+            축하합니다! AI 채점결과 "${finalScore}점"을 획득하여 완벽하게 정밀 격자 바느질 수리에 대성공하였습니다! 🎉🧸
+            <div class="ai-diag-card">
+                <div class="ai-diag-robot-avatar">🤖</div>
+                <div class="ai-diag-content">
+                    <h4>티비봇 AI 정밀 수학 진단서</h4>
+                    <p>조립 실수: ${this.assemblyErrors}회, 바느질 실수: ${this.sewingErrors}회<br>
+                    <strong>최종 점수: ${finalScore}점</strong><br><br>
+                    ${aiFeedbackText}</p>
+                </div>
+            </div>
+        `;
+
+        this.showOverlay(true, diagHTML, () => {
+            if (this.level < this.maxLevel) {
+                this.level++;
+                this.initLevel();
+            } else {
+                const finalVictoryHTML = `
+                    대단해요! 진라면 학생이 디자인한 곰돌이와 토끼 인형들을 격자 평행이동 밀기 조립과 대각선 봉합으로 모두 완벽히 치료했습니다! 🏆💖
+                    <div class="ai-diag-card">
+                        <div class="ai-diag-robot-avatar">🤖</div>
+                        <div class="ai-diag-content">
+                            <h4>티비봇 최종 마스터 평가 완료!</h4>
+                            <p>축하합니다! 6개 단계의 모든 수학 미션을 완파하며 평행이동과 밀기 공정을 완벽하게 정복했습니다! 수학 챔피언으로 임명한다봇, 삐리빅! ⚙️🏆</p>
+                        </div>
+                    </div>
+                `;
+                this.showOverlay(true, finalVictoryHTML, () => {
+                    app.showDashboard();
+                }, "메인으로");
+            }
+        });
     }
 
     showToast(msg) {
@@ -2515,7 +2771,7 @@ class GameDollShop {
 
         title.textContent = win ? "최종 합격! ✨" : "수리 보완 필요! 😭";
         title.className = `overlay-title ${win ? 'win' : 'lose'}`;
-        desc.textContent = message;
+        desc.innerHTML = message;
         btn.textContent = buttonText;
         
         btn.onclick = () => {
