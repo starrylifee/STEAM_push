@@ -310,6 +310,37 @@ class AppController {
         });
     }
 
+    async loadEnvConfig() {
+        try {
+            const response = await fetch('.env');
+            if (response.ok) {
+                const text = await response.text();
+                const lines = text.split('\n');
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line.startsWith('#') || !line) continue;
+                    
+                    const eqIndex = line.indexOf('=');
+                    if (eqIndex !== -1) {
+                        const key = line.substring(0, eqIndex).trim();
+                        const value = line.substring(eqIndex + 1).replace(/['"]/g, '').trim();
+                        
+                        if (key === 'OPENAI_API_KEY' && value) {
+                            localStorage.setItem('openai_api_key', value);
+                            if (this.openaiApiKeyInput) {
+                                this.openaiApiKeyInput.value = value;
+                            }
+                            console.log('Successfully loaded and synchronized OpenAI API key from local .env file! 🧙‍♂️🔒');
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.debug('No local .env file resolved, relying strictly on localStorage.');
+        }
+    }
+
     setupAISystem() {
         // AI Settings Modal Elements
         this.aiSettingsBtn = document.getElementById('ai-settings-btn');
@@ -331,6 +362,9 @@ class AppController {
         if (savedKey) {
             this.openaiApiKeyInput.value = savedKey;
         }
+
+        // Try loading from local .env asynchronously to streamline local development
+        this.loadEnvConfig();
 
         // Bind settings events
         if (this.aiSettingsBtn) {
