@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEAM 도형 밀기 나라 - 초등 4학년 수학 놀이터</title>
+    <meta name="description" content="초등학교 4학년 학생들이 직접 기획하고 디자인한 6가지 도형 밀기 수학 게임을 플레이해 보세요!">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- CSS Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header / Navigation -->
+    <header>
+        <div class="header-container">
+            <div class="brand" id="brand-logo">
+                <span class="brand-icon">📐</span>
+                <h1>STEAM 도형 밀기 나라</h1>
+                <span>초등 4학년</span>
+            </div>
+            <button class="back-btn hidden" id="back-to-dashboard-btn">
+                <span>←</span> 처음으로 돌아가기
+            </button>
+        </div>
+    </header>
+
+    <!-- 1. Dashboard / Home Screen -->
+    <main class="dashboard" id="dashboard-view">
+        <div class="dashboard-header-banner">
+            <div class="mascot-container">
+                <img src="oz.png" alt="오즈" class="oz-mascot-img">
+            </div>
+            <div class="dashboard-title">
+                <h2>오즈와 함께하는 6가지 도형 밀기 게임 🎮</h2>
+                <p>초등학교 4학년 도형의 밀기(평행이동) 개념을 재미있게 배워보아요!</p>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <!-- Game 1 Card -->
+            <div class="game-card" data-game="1" style="--card-color-1: #6366f1; --card-color-2: #8b5cf6; --card-glow: rgba(99, 102, 241, 0.35);">
+                <div class="game-header">
+                    <span class="game-badge">Game 1</span>
+                    <span class="game-icon">🪜</span>
+                </div>
+                <div>
+                    <h3>계단을 쌓아라</h3>
+                    <p class="game-student">기획: 서구까</p>
+                    <p class="game-desc">다양한 모양의 블록(네모, 육각, 리본, 세포, 하트)을 원하는 방향으로 밀어 계단을 차곡차곡 쌓고, 서구까 캐릭터가 위로 올라갈 수 있게 도와주세요!</p>
+                </div>
+                <div class="game-footer">
+                    <span class="math-concept">📐 도형 밀기와 쌓기</span>
+                    <span class="play-btn-card">플레이</span>
+                </div>
+            </div>
+
+            <!-- Game 2 Card -->
+            <div class="game-card" data-game="2" style="--card-color-1: #3b82f6; --card-color-2: #60a5fa; --card-glow: rgba(59, 130, 246, 0.35);">
+                <div class="game-header">
+                    <span class="game-badge">Game 2</span>
+                    <span class="game-icon">✏️</span>
+                </div>
+                <div>
+                    <h3>글씨 밀기 게임</h3>
+                    <p class="game-student">기획: 김치찌개</p>
+                    <p class="game-desc">화면 사방에 흩어진 한글 자음과 모음 조각들을 상하좌우로 밀어서(평행이동) 올바른 글자 판에 넣고 멋진 단어를 완성해 보아요!</p>
+                </div>
+                <div class="game-footer">
+                    <span class="math-concept">🔤 자모음 평행이동</span>
+                    <span class="play-btn-card">플레이</span>
+                </div>
+            </div>
+
+            <!-- Game 3 Card -->
+            <div class="game-card" data-game="3" style="--card-color-1: #f59e0b; --card-color-2: #fbbf24; --card-glow: rgba(245, 158, 11, 0.35);">
+                <div class="game-header">
+                    <span class="game-badge">Game 3</span>
+                    <span class="game-icon">🧭</span>
+                </div>
+                <div>
+                    <h3>도형을 밀어라</h3>
+                    <p class="game-student">기획: 고송까</p>
+                    <p class="game-desc">격자 그리드 위에 놓인 도형들을 지시문(예: 왼쪽으로 4칸, 위쪽으로 3칸)에 맞춰 정확한 거리와 방향으로 밀어 목표 지점에 배치하세요! 총 15단계가 기다립니다.</p>
+                </div>
+                <div class="game-footer">
+                    <span class="math-concept">📊 방향과 칸수 계산</span>
+                    <span class="play-btn-card">플레이</span>
+                </div>
+            </div>
+
+            <!-- Game 4 Card -->
+            <div class="game-card" data-game="4" style="--card-color-1: #10b981; --card-color-2: #34d399; --card-glow: rgba(16, 185, 129, 0.35);">
+                <div class="game-header">
+                    <span class="game-badge">Game 4</span>
+                    <span class="game-icon">🍹</span>
+                </div>
+                <div>
+                    <h3>물 컵 밀기 게임</h3>
+                    <p class="game-student">기획: 도도새, 백설기, 복숭아7호</p>
+                    <p class="game-desc">중앙에 놓인 과일 물컵을 모서리에 위치한 과일 주스 추출기(오렌지, 포도, 사과, 딸기)를 향해 끝까지 밀어 넣어 시원하고 달콤한 주스를 가득 채워주세요!</p>
+                </div>
+                <div class="game-footer">
+                    <span class="math-concept">🍊 4방향 대각선 밀기</span>
+                    <span class="play-btn-card">플레이</span>
+                </div>
+            </div>
+
+            <!-- Game 5 Card -->
+            <div class="game-card" data-game="5" style="--card-color-1: #ec4899; --card-color-2: #f472b6; --card-glow: rgba(236, 72, 153, 0.35);">
+                <div class="game-header">
+                    <span class="game-badge">Game 5</span>
+                    <span class="game-icon">🏃</span>
+                </div>
+                <div>
+                    <h3>사람을 미세요</h3>
+                    <p class="game-student">기획: 과일주스</p>
+                    <p class="game-desc">움직이는 외벽에 뚫린 사람 모양의 포즈 구멍을 잘 보고, 알맞은 10가지 포즈 중 하나를 고른 후 사람 캐릭터를 좌우로 슬라이드해서 완벽히 통과시켜 보세요!</p>
+                </div>
+                <div class="game-footer">
+                    <span class="math-concept">🧍 자세와 X축 일치</span>
+                    <span class="play-btn-card">플레이</span>
+                </div>
+            </div>
+
+            <!-- Game 6 Card -->
+            <div class="game-card" data-game="6" style="--card-color-1: #f43f5e; --card-color-2: #fb7185; --card-glow: rgba(244, 63, 94, 0.35);">
+                <div class="game-header">
+                    <span class="game-badge">Game 6</span>
+                    <span class="game-icon">🧸</span>
+                </div>
+                <div>
+                    <h3>인형가게</h3>
+                    <p class="game-student">기획: 진라면</p>
+                    <p class="game-desc">망가진 인형들의 떨어진 팔, 귀, 눈 장식 등을 정확한 자리에 드래그하여 맞춘 뒤, 리드미컬한 지그재그(^v^v) 경로를 따라 꿰매어 귀여운 로봇 AI의 솜씨 채점을 받으세요!</p>
+                </div>
+                <div class="game-footer">
+                    <span class="math-concept">🧵 파츠 밀기와 바느질</span>
+                    <span class="play-btn-card">플레이</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 2. Main Game View / Playground -->
+    <section class="playground hidden" id="playground-view">
+        <div class="game-wrapper">
+            <!-- Game Top Header Info -->
+            <div class="game-info-bar">
+                <div class="game-info-title">
+                    <h2 id="active-game-title">계단을 쌓아라</h2>
+                    <div class="game-info-subtitle">
+                        <span>기획자: <strong id="active-game-student" class="info-badge">서구까</strong></span>
+                        <span>개념: <strong id="active-game-concept" class="info-badge">도형 밀기와 쌓기</strong></span>
+                    </div>
+                </div>
+                <div class="game-action-buttons">
+                    <button class="sound-toggle-btn" id="sound-toggle-btn" title="소리 켜기/끄기">🔊</button>
+                    <button class="action-btn accent" id="view-original-sheet-btn">📋 원래 기획서 보기</button>
+                </div>
+            </div>
+
+            <!-- Game Play Area Grid -->
+            <div class="game-play-area">
+                
+                <!-- Game Play Area Left (Game Board) -->
+                <div class="game-board-container" id="game-board-container">
+                    
+                    <!-- Shared Game Win/Lose Overlay -->
+                    <div class="overlay-screen" id="game-overlay-screen">
+                        <div class="overlay-card">
+                            <h2 class="overlay-title win" id="overlay-title">참 잘했어요!</h2>
+                            <p class="overlay-desc" id="overlay-desc">모든 미션을 완수했습니다. 역시 대단해요!</p>
+                            <button class="overlay-btn" id="overlay-action-btn">다음 단계</button>
+                        </div>
+                    </div>
+
+                    <!-- GAME 1 SCREEN (Stairs) -->
+                    <div id="game-1-screen" class="game-screen hidden" style="width:100%; height:100%;">
+                        <canvas id="stairs-canvas" class="stairs-canvas" width="600" height="500"></canvas>
+                    </div>
+
+                    <!-- GAME 2 SCREEN (Letters Slider) -->
+                    <div id="game-2-screen" class="game-screen hidden" style="width:100%; height:100%;">
+                        <div class="letters-grid-container">
+                            <div class="letters-workspace" id="letters-workspace">
+                                <!-- Dynamic letter tiles go here -->
+                            </div>
+                            <div class="letter-targets-wrapper" id="letter-targets-wrapper">
+                                <!-- Dynamic target slots go here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GAME 3 SCREEN (Math Push Grid) -->
+                    <div id="game-3-screen" class="game-screen hidden" style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;">
+                        <div class="grid-playfield" id="grid-playfield">
+                            <!-- 10x10 Grid cells dynamically built -->
+                        </div>
+                    </div>
+
+                    <!-- GAME 4 SCREEN (Fruit Cup Dispenser) -->
+                    <div id="game-4-screen" class="game-screen hidden" style="width:100%; height:100%;">
+                        <div class="cup-arena" id="cup-arena">
+                            <!-- 4 Corner Dispensers -->
+                            <div class="dispenser top-left" data-fruit="orange" style="color: #f97316;">
+                                <span style="font-size:2rem; margin-bottom:4px;">🍊</span>
+                                <span>오렌지 주스</span>
+                            </div>
+                            <div class="dispenser top-right" data-fruit="grape" style="color: #8b5cf6;">
+                                <span style="font-size:2rem; margin-bottom:4px;">🍇</span>
+                                <span>포도 주스</span>
+                            </div>
+                            <div class="dispenser bottom-left" data-fruit="apple" style="color: #10b981;">
+                                <span style="font-size:2rem; margin-bottom:4px;">🍏</span>
+                                <span>사과 주스</span>
+                            </div>
+                            <div class="dispenser bottom-right" data-fruit="strawberry" style="color: #f43f5e;">
+                                <span style="font-size:2rem; margin-bottom:4px;">🍓</span>
+                                <span>딸기 주스</span>
+                            </div>
+
+                            <!-- Cup character in the center -->
+                            <div class="cup-character" id="cup-character">
+                                <div class="cup-fluid" id="cup-fluid"></div>
+                                <span class="cup-icon" id="cup-icon">🥛</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GAME 5 SCREEN (Stickman Pose Match) -->
+                    <div id="game-5-screen" class="game-screen hidden" style="width:100%; height:100%;">
+                        <div class="person-scene" id="person-scene">
+                            <!-- Fit Wall (Moving cutout wall) -->
+                            <div class="fit-wall" id="fit-wall">
+                                <div class="fit-hole" id="fit-hole">
+                                    <svg class="fit-hole-svg" viewBox="0 0 100 100">
+                                        <!-- Cutout stickman drawing goes here -->
+                                        <circle cx="50" cy="20" r="10"/>
+                                        <line x1="50" y1="30" x2="50" y2="60"/>
+                                        <line x1="50" y1="40" x2="30" y2="40"/>
+                                        <line x1="50" y1="40" x2="70" y2="40"/>
+                                        <line x1="50" y1="60" x2="35" y2="85"/>
+                                        <line x1="50" y1="60" x2="65" y2="85"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            <!-- Stickman character -->
+                            <div class="stick-man" id="stick-man" style="left: 50%;">
+                                <svg class="stick-svg" id="stick-svg" viewBox="0 0 100 100">
+                                    <!-- Dynamic stickman body elements go here -->
+                                    <circle cx="50" cy="20" r="10" />
+                                    <path d="M 50 30 L 50 60" />
+                                    <path id="stick-left-arm" d="M 50 40 L 30 40" />
+                                    <path id="stick-right-arm" d="M 50 40 L 70 40" />
+                                    <path id="stick-left-leg" d="M 50 60 L 35 85" />
+                                    <path id="stick-right-leg" d="M 50 60 L 65 85" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GAME 6 SCREEN (Doll Repair Shop) -->
+                    <div id="game-6-screen" class="game-screen hidden" style="width:100%; height:100%;">
+                        <div class="doll-workshop" id="doll-workshop">
+                            
+                            <!-- AI TV Head Evaluator -->
+                            <div class="ai-evaluator" id="ai-evaluator">
+                                <svg viewBox="0 0 100 100">
+                                    <!-- TV Head outline -->
+                                    <rect x="15" y="25" width="70" height="55" rx="10" stroke="var(--accent)" stroke-width="6" fill="none" />
+                                    <polyline points="35,25 25,10" stroke="var(--accent)" stroke-width="4" />
+                                    <polyline points="65,25 75,10" stroke="var(--accent)" stroke-width="4" />
+                                    <circle cx="25" cy="10" r="3" fill="var(--accent)"/>
+                                    <circle cx="75" cy="10" r="3" fill="var(--accent)"/>
+                                    <!-- TV Face / Expression -->
+                                    <path id="ai-expression" d="M 35 55 Q 50 65 65 55" stroke="var(--accent)" stroke-width="4" fill="none" />
+                                    <circle cx="35" cy="45" r="4" fill="var(--accent)"/>
+                                    <circle cx="65" cy="45" r="4" fill="var(--accent)"/>
+                                </svg>
+                                <span style="font-size:0.75rem; font-weight:bold; color:var(--accent); margin-top:2px;" id="ai-score-label">AI 평가: -점</span>
+                            </div>
+
+                            <!-- Doll silhouette placement base -->
+                            <div class="doll-body-base" id="doll-body-base">
+                                <!-- Correct parts will be visible here once snapped -->
+                                <div class="doll-part-placed correct" id="placed-body" style="width:100%; height:100%; background:rgba(255,255,255,0.02); pointer-events:none;"></div>
+                            </div>
+
+                            <!-- Sewing visual overlay canvas -->
+                            <canvas class="sewing-line-overlay" id="sewing-line-overlay" width="600" height="500"></canvas>
+                            
+                            <!-- Sewing interactive nodes -->
+                            <div id="sewing-nodes-container" style="position:absolute; width:100%; height:100%; top:0; left:0; pointer-events:none;">
+                                <!-- Nodes dynamically generated here -->
+                            </div>
+
+                            <!-- Floating parts to drag -->
+                            <div id="doll-parts-container" style="position:absolute; width:100%; height:100%; top:0; left:0; pointer-events:none;">
+                                <!-- Parts dynamically created here -->
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Game Play Area Right (Game Controls) -->
+                <div class="game-controls-panel">
+                    
+                    <!-- Top section showing game goals and math concept details -->
+                    <div class="control-section">
+                        <h4 id="control-header-title">🎮 어떻게 하나요?</h4>
+                        <p class="control-desc" id="control-game-instructions">계단 블록이 나오면 스페이스바를 누르거나 화면을 클릭하여 떨어뜨리세요! 멋진 계단을 완성해봅시다.</p>
+                        
+                        <!-- Mini state details (like Level: 1/5, Score, Stage 1/15) -->
+                        <div id="game-status-board" style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:16px; border-radius:16px; display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.95rem;">
+                                <span style="color:var(--text-muted);" id="status-label-1">레벨</span>
+                                <span style="font-weight:bold; color:var(--primary);" id="status-val-1">1 / 5</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:0.95rem;" id="status-row-2">
+                                <span style="color:var(--text-muted);" id="status-label-2">블록 상태</span>
+                                <span style="font-weight:bold; color:var(--accent);" id="status-val-2">네모 블록</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom section containing interactive control buttons -->
+                    <div class="control-section" id="interactive-controls-container">
+                        <!-- Controls will be populated dynamically by JS depending on the active game -->
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Original Worksheet Gallery Modal Overlay -->
+    <div class="modal-overlay" id="worksheet-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="modal-game-title">계단을 쌓아라 - 원래 기획서</h3>
+                <button class="close-modal-btn" id="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Thumbnail carousel of pages -->
+                <div class="sheet-images-container" id="modal-thumbnails">
+                    <!-- Dynamic thumbs (Page 1, 2, 3, 4) will go here -->
+                </div>
+                
+                <!-- Main selected page viewer -->
+                <div class="sheet-viewer-main">
+                    <img id="modal-main-image" src="" alt="기획서 원본 이미지">
+                </div>
+
+                <!-- Rules & Math explanation -->
+                <div class="sheet-rules-box">
+                    <h4>💡 학생이 기획한 게임의 규칙과 수학!</h4>
+                    <p id="modal-rules-description">서구까 학생이 기획한 원본 기획서 내용입니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web App Main JS Core Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
