@@ -826,7 +826,7 @@ class GameStairs {
             if (this.stairsPlaced.length >= this.maxBlocks) {
                 setTimeout(() => this.completeLevel(), 800);
             } else {
-                setTimeout(() => this.spawnBlock(), 500);
+                setTimeout(() => { this.spawnBlock(); this.setupControls(); }, 500);
             }
         } else {
             sound.playFailure();
