@@ -634,10 +634,10 @@ class GameStairs {
         this.statusLabel2 = document.getElementById('status-label-2');
         this.controlsContainer = document.getElementById('interactive-controls-container');
         
-        this.level = 1;
-        this.maxLevel = 5;
-        this.blockShapes = { 1: 'square', 2: 'hexagon', 3: 'ribbon', 4: 'cell', 5: 'heart' };
-        this.shapeNames = { 1: '네모 모양 블록', 2: '정육각형 블록', 3: '리본 모양 블록', 4: '세포 모양 블록', 5: '사랑 가득 하트 블록' };
+        this.maxBlocks = 7;
+        this.allShapes = ['square', 'hexagon', 'ribbon', 'cell', 'heart'];
+        this.allShapeNames = { square: '네모', hexagon: '육각형', ribbon: '리본', cell: '세포', heart: '하트' };
+        this.currentShape = 'square';
 
         this.stairsPlaced = [];
         this.currentBlock = null;
@@ -657,12 +657,11 @@ class GameStairs {
     }
 
     start() {
-        this.level = 1;
         this.stairsPlaced = [];
         this.character = { x: 30, y: 440, targetX: 30, targetY: 440, state: 'idle' };
 
-        this.statusLabel1.textContent = "계단 높이";
-        this.statusLabel2.textContent = "블록 유형";
+        this.statusLabel1.textContent = "계단 진행";
+        this.statusLabel2.textContent = "현재 블록";
         
         this.initLevel();
         
@@ -682,10 +681,9 @@ class GameStairs {
         this.character.targetX = 30;
         this.character.targetY = 440;
         this.character.state = 'idle';
-        
-        this.statusVal1.textContent = `${this.stairsPlaced.length} / 5 단`;
-        this.statusVal2.textContent = this.shapeNames[this.level];
-        
+
+        this.statusVal1.textContent = `0 / ${this.maxBlocks} 단`;
+
         this.spawnBlock();
         this.setupControls();
     }
@@ -693,35 +691,56 @@ class GameStairs {
     spawnBlock() {
         const stepNum = this.stairsPlaced.length;
         const targetY = this.startY - stepNum * this.stairHeight;
-        
-        // Start at middle column (col 3)
-        this.currentGridCol = 3;
-        
+
+        this.currentShape = this.allShapes[Math.floor(Math.random() * this.allShapes.length)];
+        this.statusVal2.textContent = this.allShapeNames[this.currentShape] + ' 블록';
+
+        // Random start column so required push distance varies each time
+        this.currentGridCol = Math.floor(Math.random() * this.maxCols);
+
         this.currentBlock = {
             col: this.currentGridCol,
             x: this.startX + this.currentGridCol * this.stairWidth,
             y: 50,
-            targetCol: stepNum, // The correct column for the staircase step!
+            targetCol: stepNum,
             targetY: targetY - this.stairHeight,
             sizeW: this.stairWidth,
             sizeH: this.stairHeight,
-            state: 'sliding', // controlled sliding state
+            state: 'sliding',
             dropSpeed: 12
         };
         this.isDropping = false;
     }
 
+    getMathPanelHTML() {
+        if (!this.currentBlock) return '';
+        const cur = this.currentGridCol;
+        const tgt = this.currentBlock.targetCol;
+        const diff = tgt - cur;
+        let moveText = '';
+        if (diff > 0) moveText = `→ 오른쪽으로 <strong style="color:#f59e0b;">${diff}칸</strong> 더 밀어야 해요`;
+        else if (diff < 0) moveText = `← 왼쪽으로 <strong style="color:#f59e0b;">${Math.abs(diff)}칸</strong> 더 밀어야 해요`;
+        else moveText = `<strong style="color:#10b981;">✓ 정확한 위치입니다! 이제 떨어뜨리세요</strong>`;
+
+        return `
+            <div id="stair-math-panel" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 14px; font-family:monospace; font-size:0.9rem; margin-bottom:10px; line-height:1.8;">
+                <div>현재 위치: <strong style="color:#ec4899;">${cur}번 칸</strong></div>
+                <div>목표 위치: <strong style="color:#f59e0b;">${tgt}번 칸</strong></div>
+                <div style="margin-top:4px; font-size:0.82rem; color:var(--text-muted);">${moveText}</div>
+            </div>`;
+    }
+
     setupControls() {
         this.controlsContainer.innerHTML = `
-            <div style="text-align:center; margin-bottom:12px;">
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">📐 다음 계단이 될 <strong style="color:var(--success);">초록색 실선 위치</strong>로 블록을 밀어 정렬하세요!</p>
-                <div style="display:flex; justify-content:center; gap:10px;">
+            <div style="text-align:center; margin-bottom:8px;">
+                ${this.getMathPanelHTML()}
+                <div style="display:flex; justify-content:center; gap:10px; margin-bottom:8px;">
                     <button class="action-btn" id="stair-move-left" style="flex:1;">◀ 왼쪽으로 밀기</button>
                     <button class="action-btn" id="stair-move-right" style="flex:1;">오른쪽으로 밀기 ▶</button>
                 </div>
             </div>
             <button class="word-check-btn" id="stair-drop-btn" style="background: linear-gradient(135deg, var(--success), #059669);">
-                📥 정렬 후 블록 떨어뜨리기 (Space)
+                📥 블록 떨어뜨리기 (Space)
             </button>
         `;
         
@@ -729,6 +748,7 @@ class GameStairs {
         document.getElementById('stair-move-right').onclick = () => this.shiftBlock(1);
         document.getElementById('stair-drop-btn').onclick = () => this.dropBlock();
 
+        if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
         this.keyHandler = (e) => {
             if (e.key === 'ArrowLeft') { e.preventDefault(); this.shiftBlock(-1); }
             if (e.key === 'ArrowRight') { e.preventDefault(); this.shiftBlock(1); }
@@ -738,13 +758,15 @@ class GameStairs {
     }
 
     shiftBlock(dir) {
-        if (!this.currentBlock || this.isDropping) return;
+        if (!this.currentBlock) return;
         const nextCol = this.currentGridCol + dir;
         if (nextCol >= 0 && nextCol < this.maxCols) {
             this.currentGridCol = nextCol;
             this.currentBlock.col = nextCol;
             this.currentBlock.x = this.startX + nextCol * this.stairWidth;
             sound.playMove();
+            const panel = document.getElementById('stair-math-panel');
+            if (panel) panel.outerHTML = this.getMathPanelHTML();
         }
     }
 
@@ -789,49 +811,41 @@ class GameStairs {
             this.stairsPlaced.push({
                 x: block.x,
                 y: block.y,
-                type: this.blockShapes[this.level]
+                type: this.currentShape
             });
             this.currentBlock = null;
             sound.playSuccess();
 
-            // Status update
-            this.statusVal1.textContent = `${this.stairsPlaced.length} / 5 단`;
+            this.statusVal1.textContent = `${this.stairsPlaced.length} / ${this.maxBlocks} 단`;
 
             // Character climbs up (X, Y translation)
             this.character.targetX = block.x + this.stairWidth / 2 - 10;
             this.character.targetY = block.y - 42;
             this.character.state = 'climbing';
 
-            if (this.stairsPlaced.length >= 5) {
+            if (this.stairsPlaced.length >= this.maxBlocks) {
                 setTimeout(() => this.completeLevel(), 800);
             } else {
                 setTimeout(() => this.spawnBlock(), 500);
             }
         } else {
-            // Failure! Crash and lose.
             sound.playFailure();
             const shiftVector = block.targetCol - block.col;
             const shiftDirection = shiftVector > 0 ? "오른쪽으로" : "왼쪽으로";
-            const shiftText = `${shiftDirection} ${Math.abs(shiftVector)}칸 더 밀어야`;
-            
-            this.showOverlay(false, `계단 정렬 실패! 정답 칸보다 ${Math.abs(shiftVector)}칸 ${shiftVector > 0 ? '왼쪽' : '오른쪽'}에 떨어졌습니다. [${shiftText}] 했어야 합니다!`, () => {
-                this.initLevel();
+            const shiftText = `${shiftDirection} ${Math.abs(shiftVector)}칸 더 밀었어야`;
+
+            this.showOverlay(false, `아깝다! 정답보다 ${Math.abs(shiftVector)}칸 ${shiftVector > 0 ? '왼쪽' : '오른쪽'}에 떨어졌어요. [${shiftText}] 합니다. 다시 도전!`, () => {
+                this.spawnBlock();
+                this.setupControls();
             });
         }
     }
 
     completeLevel() {
         sound.playWin();
-        if (this.level < this.maxLevel) {
-            this.showOverlay(true, `${this.level}단계 계단을 평행이동 밀기로 아름답게 정렬 완성했습니다! 다음 모양 계단으로 나아갑니다!`, () => {
-                this.level++;
-                this.initLevel();
-            });
-        } else {
-            this.showOverlay(true, "대단해요! 서구까 학생이 기획한 모든 모양(네모, 육각, 리본, 세포, 하트)의 계단을 정확한 칸수로 밀어 멋지게 정복했습니다! 🏆", () => {
-                app.showDashboard();
-            }, "메인으로");
-        }
+        this.showOverlay(true, `대단해요! 다양한 모양 블록 ${this.maxBlocks}개를 모두 정확한 칸으로 밀어 계단을 완성했습니다! 서구까 캐릭터가 정상에 도착했어요! 🏆`, () => {
+            app.showDashboard();
+        }, "메인으로");
     }
 
     showOverlay(win, message, action, buttonText = "계속하기") {
@@ -840,7 +854,7 @@ class GameStairs {
         const desc = document.getElementById('overlay-desc');
         const btn = document.getElementById('overlay-action-btn');
 
-        title.textContent = win ? "참 잘했어요! ✨" : "와르르르... 😭";
+        title.textContent = win ? "참 잘했어요! ✨" : "다시 도전! ↩️";
         title.className = `overlay-title ${win ? 'win' : 'lose'}`;
         desc.textContent = message;
         btn.textContent = buttonText;
@@ -879,25 +893,17 @@ class GameStairs {
         this.ctx.fillStyle = '#6366f1';
         this.ctx.fillRect(0, 440, this.canvas.width, 4);
 
-        // Draw Target Snap outline where block MUST be translated to
-        if (this.currentBlock) {
-            const stepNum = this.stairsPlaced.length;
-            const targetX = this.startX + stepNum * this.stairWidth;
-            const targetY = this.startY - (stepNum + 1) * this.stairHeight;
-            
-            this.ctx.save();
-            this.ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
-            this.ctx.lineWidth = 3;
-            this.ctx.setLineDash([4, 4]);
-            this.ctx.strokeRect(targetX + 2, targetY + 2, this.stairWidth - 4, this.stairHeight - 4);
-            
-            // Draw math arrow visual
-            if (this.currentBlock.state === 'sliding') {
-                this.ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
-                this.ctx.fillRect(targetX + 2, targetY + 2, this.stairWidth - 4, this.stairHeight - 4);
-            }
-            this.ctx.restore();
+        // Draw column number labels along the bottom rail
+        this.ctx.font = 'bold 13px monospace';
+        this.ctx.textAlign = 'center';
+        for (let c = 0; c < this.maxCols; c++) {
+            const cx = this.startX + c * this.stairWidth + this.stairWidth / 2;
+            const isTarget = this.currentBlock && c === this.currentBlock.targetCol;
+            const isCurrent = this.currentBlock && c === this.currentGridCol;
+            this.ctx.fillStyle = isTarget ? '#f59e0b' : (isCurrent ? '#ec4899' : 'rgba(255,255,255,0.25)');
+            this.ctx.fillText(`${c}번`, cx, 432);
         }
+        this.ctx.textAlign = 'left';
 
         // Draw already placed blocks
         this.stairsPlaced.forEach((stair, i) => {
@@ -907,7 +913,7 @@ class GameStairs {
         // Draw active block
         if (this.currentBlock) {
             this.drawShape(
-                this.blockShapes[this.level],
+                this.currentShape,
                 this.currentBlock.x,
                 this.currentBlock.y,
                 this.currentBlock.sizeW,
