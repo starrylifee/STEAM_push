@@ -166,7 +166,7 @@ const gamesData = {
         title: "글씨 밀기 게임",
         student: "김치찌개",
         concept: "자모음 평행이동",
-        instructions: "자모음 타일들을 미끄러운 격자판 위에서 상하좌우 방향으로 밀어서(평행이동) 정답 글자 칸에 넣어 단어를 완성하세요! 벽이나 다른 타일에 부딪힐 때까지 끝까지 미끄러지는 방식이므로, 전략적인 평행이동 경로 설계가 필요합니다.",
+        instructions: "🐱 캐릭터를 방향키로 움직여 흩어진 자모음을 밀어 넣으세요! 각 자모음이 올바른 초성·중성·종성 위치에 들어가면 한글 글자가 완성됩니다. 타이머가 있으니 빠르게! 아이템을 먹으면 보너스가 생길 수도, 패널티가 생길 수도 있어요.",
         sheets: [
             "source_images/글씨 밀기 게임_page_1.png",
             "source_images/글씨 밀기 게임_page_2.png",
@@ -855,331 +855,495 @@ class GameStairs {
 
 
 // ==========================================================================
-// 5. GAME 2: 글씨 밀기 게임 (Word Pushing Game - Letter Sokoban Refactor)
+// 5. GAME 2: 글씨 밀기 게임 (Sokoban Jamo Pusher - Syllable Structure)
 // ==========================================================================
 class GameLetters {
     constructor() {
-        this.workspace = document.getElementById('letters-workspace');
-        this.targetsWrapper = document.getElementById('letter-targets-wrapper');
-        
-        this.statusVal1 = document.getElementById('status-val-1');
-        this.statusVal2 = document.getElementById('status-val-2');
-        this.statusLabel1 = document.getElementById('status-label-1');
-        this.statusLabel2 = document.getElementById('status-label-2');
+        this.workspace         = document.getElementById('letters-workspace');
         this.controlsContainer = document.getElementById('interactive-controls-container');
-        
-        this.level = 1;
-        this.maxLevel = 2;
-        this.wordSet = {
-            1: { word: "필통", chars: ["ㅍ", "ㅣ", "ㄹ", "ㅌ", "ㅗ", "ㅇ"] },
-            2: { word: "학원", chars: ["ㅎ", "ㅏ", "ㄱ", "ㅇ", "ㅝ", "ㄴ"] }
-        };
-        
-        // Grid Sokoban Properties
-        this.gridSize = 6; // 6x6 puzzle grid
-        this.boardState = []; // 2D array representation
-        this.lettersPositions = []; // active coordinate of each letter
-        this.selectedTileIndex = null;
-        
-        // Obstacles config (e.g. fixed boxes inside grid)
-        this.obstacles = [
-            { r: 1, c: 1 }, { r: 1, c: 4 },
-            { r: 4, c: 1 }, { r: 4, c: 4 }
+        this.statusVal1        = document.getElementById('status-val-1');
+        this.statusVal2        = document.getElementById('status-val-2');
+        this.statusLabel1      = document.getElementById('status-label-1');
+        this.statusLabel2      = document.getElementById('status-label-2');
+
+        this.GRID      = 8;
+        this.stageIdx  = 0;
+        this.score     = 0;
+        this.timeLeft  = 0;
+        this.timerInt  = null;
+        this.itemSpawnInt = null;
+        this.keyHandler   = null;
+        this.fastMode     = false;
+        this.fastTimer    = null;
+        this.frozen       = false;
+        this.frozenTimer  = null;
+        this.charPos   = { r: 0, c: 0 };
+        this.tiles     = [];   // { char, r, c }
+        this.targets   = [];   // { char, r, c, syl, sylIdx, label }
+        this.items     = [];   // { type, icon, r, c }
+        this.cellEls   = [];   // 2-D array of DOM elements
+
+        // sylIdx 0 = first syllable (blue), 1 = second syllable (purple)
+        // Targets in syllable-structure layout:
+        //   vertical vowel + 종성:  초성(r,c) 중성(r,c+1) 종성(r+1,c)
+        //   horizontal vowel + 종성: 초성(r,c) 중성(r+1,c) 종성(r+2,c)
+        //   vertical vowel only:    초성(r,c) 중성(r,c+1)
+        //   horizontal vowel only:  초성(r,c) 중성(r+1,c)
+        this.stages = [
+            // ── Stage 1: 필통 ──────────────────────────────────────────────
+            // 필 = ㅍ(초,r5c1) ㅣ(중,r5c2) ㄹ(종,r6c1)  vertical+종성
+            // 통 = ㅌ(초,r4c5) ㅗ(중,r5c5) ㅇ(종,r6c5)  horizontal+종성
+            { word:'필통', timeLimit:90, charStart:{r:2,c:3},
+              tiles:[
+                {char:'ㅍ',r:1,c:6}, {char:'ㅣ',r:1,c:1},
+                {char:'ㄹ',r:3,c:5}, {char:'ㅌ',r:1,c:4},
+                {char:'ㅗ',r:3,c:2}, {char:'ㅇ',r:2,c:6},
+              ],
+              targets:[
+                {char:'ㅍ',r:5,c:1,syl:'필',sylIdx:0,label:'초성'},
+                {char:'ㅣ',r:5,c:2,syl:'필',sylIdx:0,label:'중성'},
+                {char:'ㄹ',r:6,c:1,syl:'필',sylIdx:0,label:'종성'},
+                {char:'ㅌ',r:4,c:5,syl:'통',sylIdx:1,label:'초성'},
+                {char:'ㅗ',r:5,c:5,syl:'통',sylIdx:1,label:'중성'},
+                {char:'ㅇ',r:6,c:5,syl:'통',sylIdx:1,label:'종성'},
+              ],
+              sylGuide:[
+                {name:'필',sylIdx:0,rows:[['ㅍ','ㅣ'],['ㄹ']]},
+                {name:'통',sylIdx:1,rows:[['ㅌ'],['ㅗ'],['ㅇ']]},
+              ]
+            },
+            // ── Stage 2: 사람 ──────────────────────────────────────────────
+            // 사 = ㅅ(초,r6c1) ㅏ(중,r6c2)              vertical only
+            // 람 = ㄹ(초,r5c5) ㅏ(중,r5c6) ㅁ(종,r6c5)  vertical+종성
+            { word:'사람', timeLimit:80, charStart:{r:3,c:4},
+              tiles:[
+                {char:'ㅅ',r:1,c:3}, {char:'ㅏ',r:2,c:6},
+                {char:'ㄹ',r:1,c:6}, {char:'ㅏ',r:3,c:1},
+                {char:'ㅁ',r:1,c:4},
+              ],
+              targets:[
+                {char:'ㅅ',r:6,c:1,syl:'사',sylIdx:0,label:'초성'},
+                {char:'ㅏ',r:6,c:2,syl:'사',sylIdx:0,label:'중성'},
+                {char:'ㄹ',r:5,c:5,syl:'람',sylIdx:1,label:'초성'},
+                {char:'ㅏ',r:5,c:6,syl:'람',sylIdx:1,label:'중성'},
+                {char:'ㅁ',r:6,c:5,syl:'람',sylIdx:1,label:'종성'},
+              ],
+              sylGuide:[
+                {name:'사',sylIdx:0,rows:[['ㅅ','ㅏ']]},
+                {name:'람',sylIdx:1,rows:[['ㄹ','ㅏ'],['ㅁ']]},
+              ]
+            },
+            // ── Stage 3: 나무 ──────────────────────────────────────────────
+            // 나 = ㄴ(초,r6c1) ㅏ(중,r6c2)              vertical only
+            // 무 = ㅁ(초,r5c5) ㅜ(중,r6c5)              horizontal only
+            { word:'나무', timeLimit:70, charStart:{r:3,c:3},
+              tiles:[
+                {char:'ㄴ',r:1,c:5}, {char:'ㅏ',r:2,c:2},
+                {char:'ㅁ',r:1,c:3}, {char:'ㅜ',r:3,c:6},
+              ],
+              targets:[
+                {char:'ㄴ',r:6,c:1,syl:'나',sylIdx:0,label:'초성'},
+                {char:'ㅏ',r:6,c:2,syl:'나',sylIdx:0,label:'중성'},
+                {char:'ㅁ',r:5,c:5,syl:'무',sylIdx:1,label:'초성'},
+                {char:'ㅜ',r:6,c:5,syl:'무',sylIdx:1,label:'중성'},
+              ],
+              sylGuide:[
+                {name:'나',sylIdx:0,rows:[['ㄴ','ㅏ']]},
+                {name:'무',sylIdx:1,rows:[['ㅁ'],['ㅜ']]},
+              ]
+            },
+            // ── Stage 4: 아이 ──────────────────────────────────────────────
+            // 아 = ㅇ(초,r6c1) ㅏ(중,r6c2)              vertical only
+            // 이 = ㅇ(초,r6c5) ㅣ(중,r6c6)              vertical only
+            { word:'아이', timeLimit:60, charStart:{r:3,c:3},
+              tiles:[
+                {char:'ㅇ',r:1,c:1}, {char:'ㅏ',r:1,c:4},
+                {char:'ㅇ',r:2,c:6}, {char:'ㅣ',r:3,c:2},
+              ],
+              targets:[
+                {char:'ㅇ',r:6,c:1,syl:'아',sylIdx:0,label:'초성'},
+                {char:'ㅏ',r:6,c:2,syl:'아',sylIdx:0,label:'중성'},
+                {char:'ㅇ',r:6,c:5,syl:'이',sylIdx:1,label:'초성'},
+                {char:'ㅣ',r:6,c:6,syl:'이',sylIdx:1,label:'중성'},
+              ],
+              sylGuide:[
+                {name:'아',sylIdx:0,rows:[['ㅇ','ㅏ']]},
+                {name:'이',sylIdx:1,rows:[['ㅇ','ㅣ']]},
+              ]
+            },
+            // ── Stage 5: 하늘 ──────────────────────────────────────────────
+            // 하 = ㅎ(초,r6c1) ㅏ(중,r6c2)              vertical only
+            // 늘 = ㄴ(초,r4c5) ㅡ(중,r5c5) ㄹ(종,r6c5)  horizontal+종성
+            { word:'하늘', timeLimit:50, charStart:{r:3,c:3},
+              tiles:[
+                {char:'ㅎ',r:1,c:2}, {char:'ㅏ',r:1,c:5},
+                {char:'ㄴ',r:2,c:6}, {char:'ㅡ',r:3,c:1},
+                {char:'ㄹ',r:4,c:3},
+              ],
+              targets:[
+                {char:'ㅎ',r:6,c:1,syl:'하',sylIdx:0,label:'초성'},
+                {char:'ㅏ',r:6,c:2,syl:'하',sylIdx:0,label:'중성'},
+                {char:'ㄴ',r:4,c:5,syl:'늘',sylIdx:1,label:'초성'},
+                {char:'ㅡ',r:5,c:5,syl:'늘',sylIdx:1,label:'중성'},
+                {char:'ㄹ',r:6,c:5,syl:'늘',sylIdx:1,label:'종성'},
+              ],
+              sylGuide:[
+                {name:'하',sylIdx:0,rows:[['ㅎ','ㅏ']]},
+                {name:'늘',sylIdx:1,rows:[['ㄴ'],['ㅡ'],['ㄹ']]},
+              ]
+            },
         ];
     }
 
+    // ── lifecycle ──────────────────────────────────────────────────────────
+
     start() {
-        this.level = 1;
-        this.statusLabel1.textContent = "단계";
-        this.statusLabel2.textContent = "완성 단어";
-        
-        this.initLevel();
+        this.stageIdx = 0;
+        this.score    = 0;
+        this.loadStage();
     }
 
-    initLevel() {
-        this.statusVal1.textContent = `${this.level} / ${this.maxLevel}`;
-        const activeWord = this.wordSet[this.level].word;
-        this.statusVal2.textContent = `"${activeWord}"`;
-        
-        this.workspace.innerHTML = '';
-        this.targetsWrapper.innerHTML = '';
-        this.selectedTileIndex = null;
-        
-        // Renders target boxes at bottom of screen
-        const currentData = this.wordSet[this.level];
-        currentData.chars.forEach((char, index) => {
-            const target = document.createElement('div');
-            target.className = 'letter-target';
-            target.setAttribute('data-target-char', char);
-            target.setAttribute('data-index', index);
-            target.textContent = char;
-            this.targetsWrapper.appendChild(target);
-        });
+    loadStage() {
+        this.clearTimers();
+        const cfg = this.stages[this.stageIdx];
 
-        // Initialize 6x6 Sokoban Grid Visuals inside workspace
-        this.workspace.style.display = 'grid';
-        this.workspace.style.gridTemplateColumns = 'repeat(6, 1fr)';
-        this.workspace.style.gridTemplateRows = 'repeat(6, 1fr)';
-        this.workspace.style.gap = '2px';
-        this.workspace.style.padding = '10px';
-        
-        // Renders 36 cells
-        for (let r = 0; r < this.gridSize; r++) {
-            for (let c = 0; c < this.gridSize; c++) {
-                const cell = document.createElement('div');
-                cell.className = 'letters-grid-cell';
-                cell.setAttribute('data-r', r);
-                cell.setAttribute('data-c', c);
-                
-                // Style cells beautifully
-                cell.setAttribute('style', `
-                    border: 1px solid rgba(255, 255, 255, 0.03);
-                    background: rgba(15, 23, 42, 0.5);
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                `);
-                
-                // Add obstacle visual
-                if (this.isObstacle(r, c)) {
-                    cell.style.background = 'rgba(236, 72, 153, 0.1)';
-                    cell.style.border = '1px solid rgba(236, 72, 153, 0.2)';
-                    cell.textContent = '🧱';
-                    cell.style.fontSize = '1.2rem';
-                }
-                
-                this.workspace.appendChild(cell);
-            }
-        }
+        this.tiles    = cfg.tiles.map(t => ({ ...t }));
+        this.charPos  = { ...cfg.charStart };
+        this.targets  = cfg.targets;
+        this.items    = [];
+        this.timeLeft = cfg.timeLimit;
+        this.fastMode = false;
+        this.frozen   = false;
 
-        // Place Letter Tiles inside the grid cells
-        this.lettersPositions = [];
-        const possibleCoords = [];
-        for (let r = 0; r < this.gridSize; r++) {
-            for (let c = 0; c < this.gridSize; c++) {
-                // Don't place on obstacles or edges to leave space
-                if (!this.isObstacle(r, c) && !(r === 0 && c === 0)) {
-                    possibleCoords.push({ r, c });
-                }
-            }
-        }
-        
-        // Shuffle coords
-        possibleCoords.sort(() => Math.random() - 0.5);
-        
-        currentData.chars.forEach((char, index) => {
-            const coord = possibleCoords[index];
-            this.lettersPositions.push({
-                char: char,
-                r: coord.r,
-                c: coord.c,
-                id: index
-            });
-        });
+        this.statusLabel1.textContent = '단어';
+        this.statusLabel2.textContent = '남은 시간';
+        this.statusVal1.textContent   = `${this.stageIdx + 1}/5  "${cfg.word}"`;
+        this.statusVal2.textContent   = `${this.timeLeft}초`;
 
-        this.drawLetterTiles();
+        this.buildGrid();
         this.setupControls();
+        this.startTimer();
+        this.scheduleItems();
     }
 
-    isObstacle(r, c) {
-        return this.obstacles.some(o => o.r === r && o.c === c);
-    }
+    // ── grid ───────────────────────────────────────────────────────────────
 
-    isTileOccupied(r, c) {
-        return this.lettersPositions.some(p => p.r === r && p.c === c);
-    }
+    buildGrid() {
+        this.workspace.innerHTML = '';
+        this.workspace.style.cssText = [
+            'display:grid',
+            `grid-template-columns:repeat(${this.GRID},1fr)`,
+            `grid-template-rows:repeat(${this.GRID},1fr)`,
+            'gap:2px','padding:6px',
+            'width:100%','height:100%','box-sizing:border-box',
+        ].join(';');
 
-    drawLetterTiles() {
-        // Remove existing tile DOMs
-        document.querySelectorAll('.letter-tile-element').forEach(t => t.remove());
-
-        // Render tiles
-        this.lettersPositions.forEach((tile, index) => {
-            // Find target cell DOM
-            const cell = this.workspace.querySelector(`[data-r="${tile.r}"][data-c="${tile.c}"]`);
-            if (cell) {
+        this.cellEls = [];
+        for (let r = 0; r < this.GRID; r++) {
+            this.cellEls[r] = [];
+            for (let c = 0; c < this.GRID; c++) {
                 const el = document.createElement('div');
-                el.className = 'letter-tile-element';
-                el.textContent = tile.char;
-                
-                // Styles
-                const isSelected = this.selectedTileIndex === index;
-                el.setAttribute('style', `
-                    width: 80%;
-                    height: 80%;
-                    background: ${isSelected ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)'};
-                    border: 2px solid ${isSelected ? '#fff' : 'rgba(255,255,255,0.3)'};
-                    border-radius: 10px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.5rem;
-                    font-weight: bold;
-                    color: white;
-                    cursor: pointer;
-                    box-shadow: ${isSelected ? '0 0 15px var(--primary-glow)' : '0 4px 6px rgba(0,0,0,0.3)'};
-                    transition: all 0.15s ease;
-                `);
+                this.workspace.appendChild(el);
+                this.cellEls[r][c] = el;
+            }
+        }
+        this.render();
+    }
 
-                el.onclick = (e) => {
-                    e.stopPropagation();
-                    this.selectedTileIndex = index;
-                    sound.playSelect();
-                    this.drawLetterTiles();
-                };
+    render() {
+        for (let r = 0; r < this.GRID; r++) {
+            for (let c = 0; c < this.GRID; c++) {
+                const el = this.cellEls[r][c];
+                el.className  = 'g2-cell';
+                el.innerHTML  = '';
+            }
+        }
 
-                cell.appendChild(el);
+        // targets
+        this.targets.forEach(t => {
+            const el   = this.cellEls[t.r][t.c];
+            const filled = this.tiles.some(ti => ti.r === t.r && ti.c === t.c && ti.char === t.char);
+            if (filled) {
+                el.classList.add(`g2-target-filled-${t.sylIdx}`);
+                el.innerHTML = `<span class="g2-jamo">${t.char}</span>`;
+            } else {
+                el.classList.add(`g2-target-${t.sylIdx}`);
+                el.innerHTML = `<span class="g2-ghost">${t.char}</span><span class="g2-target-label">${t.label}</span>`;
             }
         });
+
+        // tiles not on a filled target
+        this.tiles.forEach(tile => {
+            const onTarget = this.targets.some(t => t.r === tile.r && t.c === tile.c && t.char === tile.char);
+            if (!onTarget) {
+                const el = this.cellEls[tile.r][tile.c];
+                el.classList.add('g2-tile-cell');
+                el.innerHTML = `<span class="g2-jamo">${tile.char}</span>`;
+            }
+        });
+
+        // items
+        this.items.forEach(item => {
+            const el = this.cellEls[item.r][item.c];
+            el.classList.add('g2-item-cell');
+            el.innerHTML = `<span class="g2-item-icon">${item.icon}</span>`;
+        });
+
+        // character (drawn last so it renders on top)
+        const cel = this.cellEls[this.charPos.r][this.charPos.c];
+        cel.classList.add('g2-char-cell');
+        cel.innerHTML = `<span class="g2-char-icon">${this.frozen ? '🥶' : '🐱'}</span>`;
     }
+
+    // ── controls ──────────────────────────────────────────────────────────
 
     setupControls() {
+        if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
+
+        const cfg = this.stages[this.stageIdx];
+        const guideHTML = cfg.sylGuide.map(s => {
+            const rowsHTML = s.rows.map(row =>
+                `<div class="g2-syl-row">${row.map(ch => `<span class="g2-syl-slot">${ch}</span>`).join('')}</div>`
+            ).join('');
+            return `<div class="g2-syl-box g2-syl-box-${s.sylIdx}">
+                        <span class="g2-syl-name">${s.name}</span>${rowsHTML}
+                    </div>`;
+        }).join('');
+
         this.controlsContainer.innerHTML = `
-            <div style="text-align:center;">
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:10px;">📐 자모음 타일을 클릭한 뒤 아래 방향 버튼으로 **끝까지 밀어내세요**!</p>
-                <div class="push-controls-panel" style="margin-bottom:12px;">
+            <div>
+                <div class="g2-score-row">
+                    <span>단계 ${this.stageIdx + 1}/5</span>
+                    <span class="g2-score-val">🏆 ${this.score}점</span>
+                </div>
+                <div id="g2-timer-wrap" style="width:100%;height:7px;background:rgba(255,255,255,0.1);border-radius:4px;margin-bottom:10px;overflow:hidden;">
+                    <div id="g2-timer-fill" style="height:100%;width:100%;border-radius:4px;transition:width 1s linear;background:linear-gradient(90deg,#10b981,#f59e0b);"></div>
+                </div>
+                <div class="g2-word-guide">${guideHTML}</div>
+                <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-bottom:8px;">🐱 방향키로 캐릭터를 움직여 자모를 밀어 넣으세요!</p>
+                <div class="push-controls-panel">
                     <button class="push-control-btn empty"></button>
-                    <button class="push-control-btn" id="let-up">▲</button>
+                    <button class="push-control-btn" id="g2-up">▲</button>
                     <button class="push-control-btn empty"></button>
-                    <button class="push-control-btn" id="let-left">◀</button>
+                    <button class="push-control-btn" id="g2-left">◀</button>
                     <button class="push-control-btn empty"></button>
-                    <button class="push-control-btn" id="let-right">▶</button>
+                    <button class="push-control-btn" id="g2-right">▶</button>
                     <button class="push-control-btn empty"></button>
-                    <button class="push-control-btn" id="let-down">▼</button>
+                    <button class="push-control-btn" id="g2-down">▼</button>
                     <button class="push-control-btn empty"></button>
                 </div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button id="g2-confirm" style="flex:2;padding:9px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:10px;color:white;font-weight:bold;font-size:0.85rem;cursor:pointer;">✅ 확인</button>
+                    <button id="g2-reset"   style="flex:1;padding:9px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:white;font-size:0.78rem;cursor:pointer;">🔄 다시</button>
+                </div>
             </div>
-            <button class="word-check-btn" id="word-submit-btn">
-                📝 슬롯에 맞춰 밀기 완료 & 정답 검증!
-            </button>
         `;
 
-        document.getElementById('let-up').onclick = () => this.slideLetter(0, -1);
-        document.getElementById('let-down').onclick = () => this.slideLetter(0, 1);
-        document.getElementById('let-left').onclick = () => this.slideLetter(-1, 0);
-        document.getElementById('let-right').onclick = () => this.slideLetter(1, 0);
-        
-        document.getElementById('word-submit-btn').onclick = () => this.evaluateLetterMatch();
+        document.getElementById('g2-up').onclick      = () => this.tryMove(-1, 0);
+        document.getElementById('g2-down').onclick    = () => this.tryMove( 1, 0);
+        document.getElementById('g2-left').onclick    = () => this.tryMove( 0,-1);
+        document.getElementById('g2-right').onclick   = () => this.tryMove( 0, 1);
+        document.getElementById('g2-confirm').onclick = () => this.checkAnswer();
+        document.getElementById('g2-reset').onclick   = () => this.loadStage();
 
         this.keyHandler = (e) => {
-            if (e.key === 'ArrowUp') { e.preventDefault(); this.slideLetter(0, -1); }
-            if (e.key === 'ArrowDown') { e.preventDefault(); this.slideLetter(0, 1); }
-            if (e.key === 'ArrowLeft') { e.preventDefault(); this.slideLetter(-1, 0); }
-            if (e.key === 'ArrowRight') { e.preventDefault(); this.slideLetter(1, 0); }
+            const map = { ArrowUp:[-1,0], ArrowDown:[1,0], ArrowLeft:[0,-1], ArrowRight:[0,1] };
+            if (map[e.key]) { e.preventDefault(); this.tryMove(...map[e.key]); }
+            if (e.key === 'Enter') { e.preventDefault(); this.checkAnswer(); }
         };
         window.addEventListener('keydown', this.keyHandler);
     }
 
-    slideLetter(dc, dr) {
-        if (this.selectedTileIndex === null) return;
-        
-        const tile = this.lettersPositions[this.selectedTileIndex];
-        let curR = tile.r;
-        let curC = tile.c;
-        let moved = false;
+    // ── movement (Sokoban) ────────────────────────────────────────────────
 
-        // Slide continuously until hits boundary, obstacle, or another tile!
-        while (true) {
-            const nextR = curR + dr;
-            const nextC = curC + dc;
-            
-            // Check boundary limits
-            if (nextR < 0 || nextR >= this.gridSize || nextC < 0 || nextC >= this.gridSize) break;
-            // Check fixed walls
-            if (this.isObstacle(nextR, nextC)) break;
-            // Check other sliding tiles
-            if (this.isTileOccupied(nextR, nextC)) break;
-            
-            curR = nextR;
-            curC = nextC;
-            moved = true;
-        }
+    tryMove(dr, dc) {
+        if (this.frozen) return;
+        this._step(dr, dc);
+        if (this.fastMode) this._step(dr, dc);
+    }
 
-        if (moved) {
-            tile.r = curR;
-            tile.c = curC;
+    _step(dr, dc) {
+        const nr = this.charPos.r + dr;
+        const nc = this.charPos.c + dc;
+        if (nr < 0 || nr >= this.GRID || nc < 0 || nc >= this.GRID) return;
+
+        const tIdx = this.tiles.findIndex(t => t.r === nr && t.c === nc);
+        if (tIdx !== -1) {
+            const tr = nr + dr, tc = nc + dc;
+            if (tr < 0 || tr >= this.GRID || tc < 0 || tc >= this.GRID) return;
+            if (this.tiles.some(t => t.r === tr && t.c === tc)) return;
+            this.tiles[tIdx].r = tr;
+            this.tiles[tIdx].c = tc;
             sound.playMove();
-            this.drawLetterTiles();
-            
-            // Auto check if any tile lands on target slots (visually snaps/highlights targets)
-            this.updateTargetHighlight();
+        }
+
+        this.charPos.r = nr;
+        this.charPos.c = nc;
+
+        // item pickup
+        const iIdx = this.items.findIndex(i => i.r === nr && i.c === nc);
+        if (iIdx !== -1) {
+            this.applyItem(this.items.splice(iIdx, 1)[0]);
+        }
+
+        this.render();
+    }
+
+    // ── items ─────────────────────────────────────────────────────────────
+
+    scheduleItems() {
+        if (this.itemSpawnInt) clearInterval(this.itemSpawnInt);
+        setTimeout(() => this.spawnItem(), 9000);
+        this.itemSpawnInt = setInterval(() => {
+            if (this.items.length < 2) this.spawnItem();
+        }, 15000);
+    }
+
+    spawnItem() {
+        const pool = [
+            { type:'time',   icon:'⏱️', weight:3 },
+            { type:'fast',   icon:'⚡', weight:2 },
+            { type:'reset',  icon:'🔄', weight:1 },
+            { type:'freeze', icon:'❄️', weight:2 },
+        ];
+        let rand = Math.random() * pool.reduce((s,p) => s + p.weight, 0);
+        const chosen = pool.find(p => (rand -= p.weight) <= 0) || pool[0];
+
+        for (let i = 0; i < 40; i++) {
+            const r = 1 + Math.floor(Math.random() * (this.GRID - 2));
+            const c = 1 + Math.floor(Math.random() * (this.GRID - 2));
+            if (r === this.charPos.r && c === this.charPos.c) continue;
+            if (this.tiles.some(t => t.r === r && t.c === c))   continue;
+            if (this.targets.some(t => t.r === r && t.c === c)) continue;
+            if (this.items.some(it => it.r === r && it.c === c)) continue;
+            const item = { ...chosen, r, c };
+            this.items.push(item);
+            this.render();
+            setTimeout(() => {
+                this.items = this.items.filter(it => it !== item);
+                this.render();
+            }, 9000);
+            break;
         }
     }
 
-    updateTargetHighlight() {
-        const targets = document.querySelectorAll('.letter-target');
-        targets.forEach(tar => {
-            const char = tar.getAttribute('data-target-char');
-            // Check if any tile with matching char is located in a specific grid row (e.g. bottom row row 5)
-            // Let's say, we map slot index to specific grid columns (col 0 to 5) in row 5!
-            const slotIndex = parseInt(tar.getAttribute('data-index'));
-            const matchingTile = this.lettersPositions.find(p => p.char === char && p.r === 5 && p.c === slotIndex);
-            
-            if (matchingTile) {
-                tar.classList.add('filled');
-                tar.setAttribute('data-filled-by', char);
-            } else {
-                tar.classList.remove('filled');
-                tar.removeAttribute('data-filled-by');
-            }
-        });
+    applyItem(item) {
+        sound.playSelect();
+        const cfg = this.stages[this.stageIdx];
+        if (item.type === 'time') {
+            this.timeLeft = Math.min(this.timeLeft + 10, cfg.timeLimit);
+            this.updateTimerBar();
+            this.statusVal2.textContent = `${this.timeLeft}초`;
+            this.flash('+10초 ⏱️', '#10b981');
+        } else if (item.type === 'fast') {
+            this.fastMode = true;
+            clearTimeout(this.fastTimer);
+            this.fastTimer = setTimeout(() => { this.fastMode = false; }, 5000);
+            this.flash('⚡ 빠른 발! 5초', '#f59e0b');
+        } else if (item.type === 'reset') {
+            this.loadStage();
+        } else if (item.type === 'freeze') {
+            this.frozen = true;
+            this.timeLeft = Math.max(0, this.timeLeft - 5);
+            this.updateTimerBar();
+            this.statusVal2.textContent = `${this.timeLeft}초`;
+            clearTimeout(this.frozenTimer);
+            this.frozenTimer = setTimeout(() => { this.frozen = false; this.render(); }, 3000);
+            this.flash('❄️ 얼음! -5초', '#ef4444');
+        }
     }
 
-    evaluateLetterMatch() {
-        const targets = document.querySelectorAll('.letter-target');
-        let allCorrect = true;
-        
-        targets.forEach(tar => {
-            const targetChar = tar.getAttribute('data-target-char');
-            const filledChar = tar.getAttribute('data-filled-by');
-            
-            if (filledChar !== targetChar) {
-                allCorrect = false;
-            }
-        });
+    flash(text, color) {
+        const el = document.createElement('div');
+        el.style.cssText = `position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);background:${color};color:white;padding:10px 22px;border-radius:12px;font-weight:bold;font-size:1rem;z-index:9999;pointer-events:none;animation:g2-flash-anim 1.1s ease forwards;`;
+        el.textContent = text;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 1100);
+    }
 
-        if (allCorrect) {
+    // ── timer ─────────────────────────────────────────────────────────────
+
+    startTimer() {
+        this.timerInt = setInterval(() => {
+            if (this.frozen) return;
+            this.timeLeft--;
+            this.statusVal2.textContent = `${this.timeLeft}초`;
+            this.updateTimerBar();
+            if (this.timeLeft <= 0) {
+                this.clearTimers();
+                this.showOverlay(false, '⏰ 시간 초과! 다시 도전해볼까요?',
+                    () => this.loadStage(), '다시 하기');
+            }
+        }, 1000);
+    }
+
+    updateTimerBar() {
+        const fill = document.getElementById('g2-timer-fill');
+        if (!fill) return;
+        const pct = (this.timeLeft / this.stages[this.stageIdx].timeLimit) * 100;
+        fill.style.width = `${pct}%`;
+        fill.style.background = pct > 50
+            ? 'linear-gradient(90deg,#10b981,#f59e0b)'
+            : pct > 20 ? 'linear-gradient(90deg,#f59e0b,#ef4444)' : '#ef4444';
+    }
+
+    // ── answer check ──────────────────────────────────────────────────────
+
+    checkAnswer() {
+        const allOk = this.targets.every(t =>
+            this.tiles.some(ti => ti.r === t.r && ti.c === t.c && ti.char === t.char)
+        );
+
+        if (allOk) {
             sound.playWin();
-            this.showOverlay(true, `대단해요! 소코반 빙판 밀기를 통해 자모음을 완벽히 슬롯(5번 행 격자)에 맞췄습니다! "${this.wordSet[this.level].word}" 복원 완료! 🏆`, () => {
-                if (this.level < this.maxLevel) {
-                    this.level++;
-                    this.initLevel();
-                } else {
-                    this.showOverlay(true, "대단합니다! 김치찌개 학생이 기획한 한글 글자 격자 밀기 소코반 퍼즐을 모두 완벽하게 해결했습니다! 🏆🎉", () => {
-                        app.showDashboard();
-                    }, "메인으로");
-                }
-            });
+            this.clearTimers();
+            const bonus = this.timeLeft * 10;
+            this.score += 1000 + bonus;
+            const word = this.stages[this.stageIdx].word;
+
+            if (this.stageIdx < this.stages.length - 1) {
+                this.showOverlay(true,
+                    `"${word}" 완성! 🎉\n시간 보너스: +${bonus}점 / 누적: ${this.score}점`,
+                    () => { this.stageIdx++; this.loadStage(); }, '다음 단어 →');
+            } else {
+                this.showOverlay(true,
+                    `🏆 5개 단어 모두 완성!\n최종 점수: ${this.score}점\n한글 자모 + 도형 밀기 마스터!`,
+                    () => app.showDashboard(), '메인으로');
+            }
         } else {
             sound.playFailure();
-            this.showOverlay(false, "글자가 맞지 않는 칸이 있거나 비어있습니다. 격자판 최하단 줄(5번 행)의 알맞은 칸 번호에 자모음들을 차례대로 밀어서 골인시켜 보세요!", () => {});
+            this.timeLeft = Math.max(0, this.timeLeft - 5);
+            this.statusVal2.textContent = `${this.timeLeft}초`;
+            this.updateTimerBar();
+            this.flash('아직 안 맞아요! -5초 ❌', '#ef4444');
         }
     }
 
-    showOverlay(win, message, action, buttonText = "계속하기") {
-        const overlay = document.getElementById('game-overlay-screen');
-        const title = document.getElementById('overlay-title');
-        const desc = document.getElementById('overlay-desc');
+    // ── overlay & cleanup ─────────────────────────────────────────────────
+
+    showOverlay(win, message, action, btnText = '계속하기') {
+        const ov = document.getElementById('game-overlay-screen');
+        document.getElementById('overlay-title').textContent = win ? '정답! ✨' : '시간 초과! ⏰';
+        document.getElementById('overlay-title').className   = `overlay-title ${win ? 'win' : 'lose'}`;
+        document.getElementById('overlay-desc').textContent  = message;
         const btn = document.getElementById('overlay-action-btn');
+        btn.textContent = btnText;
+        btn.onclick = () => { ov.classList.remove('active'); action(); };
+        ov.classList.add('active');
+    }
 
-        title.textContent = win ? "정답입니다! ✨" : "아직 미완성! ✏️";
-        title.className = `overlay-title ${win ? 'win' : 'lose'}`;
-        desc.textContent = message;
-        btn.textContent = buttonText;
-        
-        btn.onclick = () => {
-            overlay.classList.remove('active');
-            action();
-        };
-
-        overlay.classList.add('active');
+    clearTimers() {
+        clearInterval(this.timerInt);
+        clearInterval(this.itemSpawnInt);
+        clearTimeout(this.fastTimer);
+        clearTimeout(this.frozenTimer);
     }
 
     cleanup() {
-        window.removeEventListener('keydown', this.keyHandler);
-        this.workspace.innerHTML = '';
-        this.workspace.style.display = 'block'; // reset defaults
+        this.clearTimers();
+        if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
+        this.workspace.innerHTML  = '';
+        this.workspace.style.cssText = '';
     }
 }
 
@@ -1359,11 +1523,25 @@ class GamePushGrid {
         
         document.getElementById('grid-submit-btn').onclick = () => this.evaluatePosition();
 
+        if (this.keyHandler) {
+            window.removeEventListener('keydown', this.keyHandler);
+        }
+
+        const keyMoves = {
+            ArrowUp: [0, -1],
+            ArrowDown: [0, 1],
+            ArrowLeft: [-1, 0],
+            ArrowRight: [1, 0]
+        };
+
         this.keyHandler = (e) => {
-            if (e.key === 'ArrowUp') { e.preventDefault(); this.shiftShape(0, -1); }
-            if (e.key === 'ArrowDown') { e.preventDefault(); this.shiftShape(0, 1); }
-            if (e.key === 'ArrowLeft') { e.preventDefault(); this.shiftShape(-1, 0); }
-            if (e.key === 'ArrowRight') { e.preventDefault(); this.shiftShape(1, 0); }
+            const move = keyMoves[e.key];
+            if (!move) return;
+
+            e.preventDefault();
+            if (e.repeat) return;
+
+            this.shiftShape(move[0], move[1]);
         };
         window.addEventListener('keydown', this.keyHandler);
     }
@@ -1483,7 +1661,10 @@ class GamePushGrid {
     }
 
     cleanup() {
-        window.removeEventListener('keydown', this.keyHandler);
+        if (this.keyHandler) {
+            window.removeEventListener('keydown', this.keyHandler);
+            this.keyHandler = null;
+        }
         this.playfield.innerHTML = '';
     }
 }
@@ -1945,6 +2126,7 @@ class GamePushPerson {
         document.getElementById('btn-slide-left').onclick = () => this.slidePerson(-1);
         document.getElementById('btn-slide-right').onclick = () => this.slidePerson(1);
 
+        if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
         this.keyHandler = (e) => {
             if (e.key === 'ArrowLeft') { e.preventDefault(); this.slidePerson(-1); }
             if (e.key === 'ArrowRight') { e.preventDefault(); this.slidePerson(1); }
@@ -2007,7 +2189,7 @@ class GamePushPerson {
                 explanation += `<br>요구 자세: [${this.poses[this.holePoseId].name}]인데 [${this.poses[this.selectedPoseId].name}]를 골랐습니다!`;
             }
             if (!isXAligned) {
-                explanation += `<br>현재 X좌표는 [${curCoord}]인데, 목표 좌표는 [${targetCoord}]였습니다. **[${dirName}으로 ${Math.abs(vectorVal)}칸]** 평행이동 밀기를 더 해야 통과할 수 있습니다!`;
+                explanation += `<br>현재 X좌표는 [${curCoord}]인데, 목표 좌표는 [${targetCoord}]였습니다. <strong>[${dirName}으로 ${Math.abs(vectorVal)}칸]</strong> 평행이동 밀기를 더 해야 통과할 수 있습니다!`;
             }
             
             this.showOverlay(false, explanation, () => {
