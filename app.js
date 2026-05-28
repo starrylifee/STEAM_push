@@ -218,14 +218,14 @@ const gamesData = {
         title: "인형가게",
         student: "진라면",
         concept: "파츠 밀기와 바느질",
-        instructions: "인형의 찢어진 부위들을 조립하기 위해 파츠를 클릭하고 가로/세로 '평행이동 격자 컨트롤러'를 이용해 정확한 X, Y 칸수만큼 밀어서 붙이세요! 조립을 완료한 뒤 나타나는 바느질 선 역시 대각선 이동 벡터를 골라 바늘을 정확히 밀어 꿰맨 후 로봇의 점수를 받으세요.",
+        instructions: "찢어진 인형 파츠를 직접 잡아 점선 자리까지 밀어 붙이세요. 파츠는 격자 칸에 맞춰 움직이며, 조립을 마친 뒤에는 배 위의 ^v^v 바느질 길을 따라 대각선 방향으로 꿰매고 TV 머리 검사 로봇의 점검을 받습니다.",
         sheets: [
             "source_images/인형가게_page_1.png",
             "source_images/인형가게_page_2.png",
             "source_images/인형가게_page_3.png",
             "source_images/인형가게_page_4.png"
         ],
-        rulesDescription: "진라면 학생의 사랑스러운 인형 병원 기획입니다. 자유 마우스 드래그 대신 '격자 평행이동 벡터(dx, dy) 지시 제어' 방식으로 파츠를 밀어 조립하게 하였고, 바느질 역시 대각선 밀기 방향 기하학 연산을 접목하여 수학 교육과 귀여운 의사 선생님 역할극을 완벽히 하나로 융합시켰습니다!"
+        rulesDescription: "진라면 학생의 사랑스러운 인형 병원 기획입니다. 망가진 인형의 귀, 팔, 단추 눈, 천 조각을 직접 밀어 제자리로 평행이동시키고, 마지막에는 ^v^v 바느질 경로를 따라 봉합합니다. 수리 검사는 기획서처럼 50점 기준으로 통과와 재도전을 나눕니다."
     }
 };
 
@@ -1814,6 +1814,7 @@ class GameWaterCup {
         document.getElementById('cup-ctrl-left').onclick = () => this.slideCup(-1, 0);
         document.getElementById('cup-ctrl-right').onclick = () => this.slideCup(1, 0);
 
+        if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
         this.keyHandler = (e) => {
             if (e.key === 'ArrowUp') { e.preventDefault(); this.slideCup(0, -1); }
             if (e.key === 'ArrowDown') { e.preventDefault(); this.slideCup(0, 1); }
@@ -2288,7 +2289,9 @@ class GameDollShop {
         };
 
         // Grid parameters inside doll workshop
-        this.cellSize = 40; // pixel size per coordinate unit
+        this.cellSize = 34; // pixel size per coordinate unit
+        this.dragState = null;
+        this.partsData = this.createPartsData();
     }
 
     start() {
@@ -2311,7 +2314,7 @@ class GameDollShop {
         this.statusVal2.textContent = "1. 파츠 조립 정렬";
         
         this.aiExpression.setAttribute('d', 'M 35 55 Q 50 65 65 55');
-        this.aiScoreLabel.textContent = "AI 평가: -점";
+        this.aiScoreLabel.textContent = "검사 점수: -점";
 
         // Draw static body outline
         this.bodyBase.setAttribute('style', data.outline);
@@ -2475,7 +2478,7 @@ class GameDollShop {
         } else if (this.gameState === 'grading') {
             this.controlsContainer.innerHTML = `
                 <button class="word-check-btn" id="btn-submit-grading" style="background: linear-gradient(135deg, var(--accent), var(--secondary));">
-                    🤖 TV 머리 AI 로봇에게 수리 완료 제출
+                    🤖 TV 머리 검사 로봇에게 수리 완료 제출
                 </button>
             `;
             document.getElementById('btn-submit-grading').onclick = () => this.triggerAIEvaluation();
@@ -2590,7 +2593,7 @@ class GameDollShop {
             if (this.sewingProgress >= data.sewVectorNodes.length - 1) {
                 setTimeout(() => {
                     this.gameState = 'grading';
-                    this.statusVal2.textContent = "3. AI 로봇 최종 평가";
+                    this.statusVal2.textContent = "3. 수리 검사";
                     sound.playSuccess();
                     this.setupControls();
                 }, 500);
@@ -2721,9 +2724,540 @@ class GameDollShop {
         overlay.classList.add('active');
     }
 
+    createPartsData() {
+        return {
+            1: {
+                name: "곰돌이 인형 수리",
+                figureClass: "bear",
+                baseColor: "#b96b32",
+                accentColor: "#f4bf86",
+                parts: [
+                    { id: "ear-left", label: "왼쪽 귀", kind: "ear", start: { x: -4, y: 2 }, target: { x: 1, y: 1 }, w: 58, h: 58 },
+                    { id: "ear-right", label: "오른쪽 귀", kind: "ear", start: { x: -4, y: 4 }, target: { x: 6, y: 1 }, w: 58, h: 58 },
+                    { id: "arm-left", label: "왼쪽 팔", kind: "arm", start: { x: -4, y: 6 }, target: { x: 0, y: 6 }, w: 46, h: 86 },
+                    { id: "button-eye", label: "단추 눈", kind: "button", start: { x: -4, y: 8 }, target: { x: 4, y: 3 }, w: 36, h: 36 },
+                    { id: "belly-patch", label: "배 천 조각", kind: "patch", start: { x: -4, y: 10 }, target: { x: 3, y: 7 }, w: 78, h: 58 }
+                ],
+                sewVectorNodes: [
+                    { x: 3.2, y: 6.6, label: "배 왼쪽 위" },
+                    { x: 4.8, y: 7.2, label: "배 오른쪽 아래" },
+                    { x: 3.2, y: 7.9, label: "배 왼쪽 아래" },
+                    { x: 4.8, y: 8.5, label: "배 오른쪽 아래" }
+                ],
+                sewDirs: ["dr", "dl", "dr"]
+            },
+            2: {
+                name: "토끼 인형 수리",
+                figureClass: "rabbit",
+                baseColor: "#d989b5",
+                accentColor: "#ffd7ea",
+                parts: [
+                    { id: "ear-left", label: "왼쪽 긴 귀", kind: "rabbit-ear", start: { x: -4, y: 1 }, target: { x: 2, y: 0 }, w: 42, h: 102 },
+                    { id: "ear-right", label: "오른쪽 긴 귀", kind: "rabbit-ear", start: { x: -4, y: 4 }, target: { x: 5, y: 0 }, w: 42, h: 102 },
+                    { id: "bow-tie", label: "리본 타이", kind: "bow", start: { x: -4, y: 7 }, target: { x: 3, y: 5 }, w: 72, h: 46 },
+                    { id: "arm-right", label: "오른쪽 팔", kind: "arm", start: { x: -4, y: 9 }, target: { x: 7, y: 6 }, w: 46, h: 86 },
+                    { id: "belly-patch", label: "배 천 조각", kind: "patch", start: { x: -4, y: 11 }, target: { x: 3, y: 8 }, w: 82, h: 54 }
+                ],
+                sewVectorNodes: [
+                    { x: 3.0, y: 7.0, label: "배 왼쪽 위" },
+                    { x: 4.8, y: 7.6, label: "배 오른쪽 아래" },
+                    { x: 3.0, y: 8.3, label: "배 왼쪽 아래" },
+                    { x: 4.8, y: 8.9, label: "배 오른쪽 아래" }
+                ],
+                sewDirs: ["dr", "dl", "dr"]
+            }
+        };
+    }
+
+    start() {
+        this.level = 1;
+        this.statusLabel1.textContent = "복원 인형";
+        this.statusLabel2.textContent = "작업 공정";
+        this.initLevel();
+    }
+
+    initLevel() {
+        this.gameState = "assemble";
+        this.activePartIndex = 0;
+        this.sewingProgress = 0;
+        this.assemblyErrors = 0;
+        this.sewingErrors = 0;
+        this.dragState = null;
+
+        const data = this.partsData[this.level];
+        this.statusVal1.textContent = data.name;
+        this.statusVal2.textContent = "1. 파츠 직접 밀기";
+        this.aiExpression.setAttribute("d", "M 35 55 Q 50 65 65 55");
+        this.aiScoreLabel.textContent = "검사 점수: -점";
+
+        data.parts.forEach(part => {
+            part.current = { ...part.start };
+        });
+
+        this.clearDollBoard();
+        this.renderDollBase();
+        this.spawnPartTiles();
+        this.setupControls();
+    }
+
+    clearDollBoard() {
+        document.querySelectorAll(".doll-part-element, .doll-part-ghost-element").forEach(el => el.remove());
+        const nodes = document.getElementById("sewing-nodes-container");
+        if (nodes) nodes.innerHTML = "";
+
+        const canvas = document.getElementById("sewing-line-overlay");
+        if (canvas) {
+            canvas.width = this.workshop.clientWidth || 600;
+            canvas.height = this.workshop.clientHeight || 500;
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    renderDollBase() {
+        const data = this.partsData[this.level];
+        this.bodyBase.className = `doll-body-base doll-${data.figureClass}`;
+        this.bodyBase.style.setProperty("--doll-color", data.baseColor);
+        this.bodyBase.style.setProperty("--doll-accent", data.accentColor);
+        this.bodyBase.innerHTML = `
+            <div class="doll-silhouette">
+                <div class="doll-head">
+                    <span class="doll-face-eye left"></span>
+                    <span class="doll-face-eye right"></span>
+                    <span class="doll-face-mouth"></span>
+                </div>
+                <div class="doll-body">
+                    <span class="doll-stitch-wound"></span>
+                </div>
+                <span class="doll-socket ear-left"></span>
+                <span class="doll-socket ear-right"></span>
+                <span class="doll-socket arm-left"></span>
+                <span class="doll-socket arm-right"></span>
+            </div>
+        `;
+    }
+
+    spawnPartTiles() {
+        document.querySelectorAll(".doll-part-element, .doll-part-ghost-element").forEach(el => el.remove());
+        const data = this.partsData[this.level];
+        const allPlaced = this.gameState !== "assemble";
+
+        data.parts.forEach((part, index) => {
+            if (index < this.activePartIndex || allPlaced) {
+                const placed = this.createPieceElement(part, "doll-part-element placed");
+                this.setPiecePosition(placed, part.target);
+                this.workshop.appendChild(placed);
+            }
+        });
+
+        if (this.gameState !== "assemble" || this.activePartIndex >= data.parts.length) return;
+
+        const activePart = data.parts[this.activePartIndex];
+        const ghost = this.createPieceElement(activePart, "doll-part-ghost-element");
+        this.setPiecePosition(ghost, activePart.target);
+        this.workshop.appendChild(ghost);
+
+        const active = this.createPieceElement(activePart, "doll-part-element active");
+        this.setPiecePosition(active, activePart.current);
+        this.bindPartDrag(active, activePart);
+        this.workshop.appendChild(active);
+    }
+
+    createPieceElement(part, extraClass) {
+        const data = this.partsData[this.level];
+        const el = document.createElement("div");
+        el.className = `${extraClass} doll-piece piece-${part.kind}`;
+        el.setAttribute("aria-label", part.label);
+        el.style.setProperty("--part-w", `${part.w}px`);
+        el.style.setProperty("--part-h", `${part.h}px`);
+        el.style.setProperty("--part-color", data.baseColor);
+        el.style.setProperty("--part-accent", data.accentColor);
+        el.innerHTML = `<span class="piece-detail"></span>`;
+        return el;
+    }
+
+    getPiecePosition(coord) {
+        const wRect = this.workshop.getBoundingClientRect();
+        const baseRect = this.bodyBase.getBoundingClientRect();
+        return {
+            x: baseRect.left - wRect.left + coord.x * this.cellSize,
+            y: baseRect.top - wRect.top + coord.y * this.cellSize
+        };
+    }
+
+    setPiecePosition(el, coord) {
+        const pos = this.getPiecePosition(coord);
+        el.style.left = `${pos.x}px`;
+        el.style.top = `${pos.y}px`;
+    }
+
+    bindPartDrag(el, part) {
+        el.addEventListener("pointerdown", (event) => {
+            if (this.gameState !== "assemble") return;
+            const rect = el.getBoundingClientRect();
+            this.dragState = {
+                part,
+                element: el,
+                pointerId: event.pointerId,
+                grabX: event.clientX - rect.left,
+                grabY: event.clientY - rect.top
+            };
+            el.setPointerCapture(event.pointerId);
+            el.classList.add("dragging");
+            sound.playSelect();
+        });
+
+        el.addEventListener("pointermove", (event) => {
+            if (!this.dragState || this.dragState.pointerId !== event.pointerId) return;
+            const coord = this.pointerToGridCoord(event, this.dragState);
+            if (coord.x === part.current.x && coord.y === part.current.y) return;
+            part.current = coord;
+            this.setPiecePosition(el, part.current);
+            this.updateShiftReadout(part);
+        });
+
+        const finishDrag = (event) => {
+            if (!this.dragState || this.dragState.pointerId !== event.pointerId) return;
+            el.classList.remove("dragging");
+            this.dragState = null;
+            sound.playMove();
+            this.setupControls();
+        };
+
+        el.addEventListener("pointerup", finishDrag);
+        el.addEventListener("pointercancel", finishDrag);
+    }
+
+    pointerToGridCoord(event, drag) {
+        const baseRect = this.bodyBase.getBoundingClientRect();
+        const rawX = event.clientX - baseRect.left - drag.grabX;
+        const rawY = event.clientY - baseRect.top - drag.grabY;
+        return {
+            x: Math.max(-5, Math.min(8, Math.round(rawX / this.cellSize))),
+            y: Math.max(-1, Math.min(11, Math.round(rawY / this.cellSize)))
+        };
+    }
+
+    getShiftVector(part, coord = part.current) {
+        return {
+            dx: coord.x - part.start.x,
+            dy: coord.y - part.start.y
+        };
+    }
+
+    formatVector(vector) {
+        const pieces = [];
+        if (vector.dx > 0) pieces.push(`오른쪽 ${vector.dx}칸`);
+        if (vector.dx < 0) pieces.push(`왼쪽 ${Math.abs(vector.dx)}칸`);
+        if (vector.dy > 0) pieces.push(`아래 ${vector.dy}칸`);
+        if (vector.dy < 0) pieces.push(`위 ${Math.abs(vector.dy)}칸`);
+        return pieces.length ? pieces.join(", ") : "제자리";
+    }
+
+    updateShiftReadout(part) {
+        const readout = document.getElementById("doll-shift-readout");
+        if (readout) readout.textContent = this.formatVector(this.getShiftVector(part));
+    }
+
+    setupControls() {
+        if (this.gameState === "assemble") {
+            const data = this.partsData[this.level];
+            const part = data.parts[this.activePartIndex];
+            const targetVector = this.getShiftVector(part, part.target);
+            const queue = data.parts.map((item, index) => {
+                const state = index < this.activePartIndex ? "done" : (index === this.activePartIndex ? "active" : "waiting");
+                return `<span class="doll-part-pill ${state}">${index + 1}. ${item.label}</span>`;
+            }).join("");
+
+            this.controlsContainer.innerHTML = `
+                <div>
+                    <h4 class="doll-control-title">수리 파츠: <span>${part.label}</span></h4>
+                    <p class="doll-control-copy">반짝이는 파츠를 직접 잡고 점선 자리까지 밀어 보세요. 놓으면 가장 가까운 격자 칸에 맞춰집니다.</p>
+                    <div class="doll-vector-card">
+                        <span>현재 이동</span>
+                        <strong id="doll-shift-readout">${this.formatVector(this.getShiftVector(part))}</strong>
+                    </div>
+                    <div class="doll-vector-card target">
+                        <span>목표 이동</span>
+                        <strong>${this.formatVector(targetVector)}</strong>
+                    </div>
+                    <div class="doll-part-queue">${queue}</div>
+                </div>
+                <button class="word-check-btn doll-submit-btn" id="part-submit-btn">
+                    위치 확인
+                </button>
+            `;
+
+            document.getElementById("part-submit-btn").onclick = () => this.evaluatePartPlacement();
+        } else if (this.gameState === "sewing") {
+            const data = this.partsData[this.level];
+            const node = data.sewVectorNodes[this.sewingProgress];
+            const pattern = data.sewDirs.map((dir, index) => {
+                const state = index < this.sewingProgress ? "done" : (index === this.sewingProgress ? "active" : "");
+                return `<span class="${state}">${dir === "dr" ? "↘" : "↙"}</span>`;
+            }).join("");
+
+            this.controlsContainer.innerHTML = `
+                <div>
+                    <h4 class="doll-control-title">바느질 경로: <span>^v^v 봉합</span></h4>
+                    <p class="doll-control-copy">배 위의 빛나는 점을 따라 다음 대각선 방향을 고르세요. 선은 실제 꿰맨 길처럼 남습니다.</p>
+                    <div class="sew-pattern">${pattern}</div>
+                    <div class="doll-vector-card target">
+                        <span>현재 바늘 위치</span>
+                        <strong>${node ? node.label : "마지막 매듭"}</strong>
+                    </div>
+                    <div class="sew-choice-grid">
+                        <button class="action-btn" id="sew-vector-dr">↘ 오른쪽 아래</button>
+                        <button class="action-btn" id="sew-vector-dl">↙ 왼쪽 아래</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById("sew-vector-dr").onclick = () => this.shiftNeedle("dr");
+            document.getElementById("sew-vector-dl").onclick = () => this.shiftNeedle("dl");
+        } else if (this.gameState === "grading") {
+            this.controlsContainer.innerHTML = `
+                <div>
+                    <h4 class="doll-control-title">수리 검사</h4>
+                    <p class="doll-control-copy">수리한 인형을 TV 머리 검사 로봇에게 보여 주세요. 50점 이상이면 통과입니다.</p>
+                </div>
+                <button class="word-check-btn doll-submit-btn" id="btn-submit-grading">
+                    검사 받기
+                </button>
+            `;
+            document.getElementById("btn-submit-grading").onclick = () => this.triggerAIEvaluation();
+        }
+    }
+
+    shiftPart(dx, dy) {
+        const data = this.partsData[this.level];
+        const part = data.parts[this.activePartIndex];
+        part.current = {
+            x: Math.max(-5, Math.min(8, part.current.x + dx)),
+            y: Math.max(-1, Math.min(11, part.current.y + dy))
+        };
+        sound.playMove();
+        this.spawnPartTiles();
+        this.setupControls();
+    }
+
+    evaluatePartPlacement() {
+        const data = this.partsData[this.level];
+        const part = data.parts[this.activePartIndex];
+
+        if (part.current.x === part.target.x && part.current.y === part.target.y) {
+            sound.playSuccess();
+            this.activePartIndex++;
+
+            if (this.activePartIndex >= data.parts.length) {
+                this.gameState = "sewing";
+                this.spawnPartTiles();
+                setTimeout(() => this.initSewingStage(), 350);
+                return;
+            }
+
+            this.spawnPartTiles();
+            this.setupControls();
+            return;
+        }
+
+        sound.playFailure();
+        this.assemblyErrors++;
+
+        const remaining = {
+            dx: part.target.x - part.current.x,
+            dy: part.target.y - part.current.y
+        };
+        this.showToast(`아직 위치가 달라요. 여기서 ${this.formatVector(remaining)} 더 밀어야 해요.`);
+        part.current = { ...part.start };
+        this.spawnPartTiles();
+        this.setupControls();
+    }
+
+    initSewingStage() {
+        this.gameState = "sewing";
+        this.sewingProgress = 0;
+        this.statusVal2.textContent = "2. 지그재그 바느질";
+        sound.playWin();
+        this.clearDollBoard();
+        this.renderDollBase();
+        this.spawnPartTiles();
+        this.renderSewingNodes();
+        this.setupControls();
+        this.showToast("파츠 조립 완료! 이제 배의 찢어진 부분을 ^v^v로 꿰매 주세요.");
+    }
+
+    renderSewingNodes() {
+        const nodesContainer = document.getElementById("sewing-nodes-container");
+        nodesContainer.innerHTML = "";
+        const data = this.partsData[this.level];
+
+        data.sewVectorNodes.forEach((node, index) => {
+            const dot = document.createElement("div");
+            dot.className = `sewing-node ${index === 0 ? "active" : ""}`;
+            dot.textContent = index + 1;
+            const pos = this.getPiecePosition(node);
+            dot.style.left = `${pos.x}px`;
+            dot.style.top = `${pos.y}px`;
+            nodesContainer.appendChild(dot);
+        });
+
+        this.drawSewingLine();
+    }
+
+    shiftNeedle(dir) {
+        const data = this.partsData[this.level];
+        const targetDir = data.sewDirs[this.sewingProgress];
+
+        if (dir !== targetDir) {
+            sound.playFailure();
+            this.sewingErrors++;
+            this.showToast("바늘 방향이 달라요. ^v^v 흐름을 다시 보세요.");
+            return;
+        }
+
+        sound.playSew();
+        this.sewingProgress++;
+        const nodes = document.querySelectorAll(".sewing-node");
+        if (nodes[this.sewingProgress - 1]) {
+            nodes[this.sewingProgress - 1].classList.remove("active");
+            nodes[this.sewingProgress - 1].classList.add("done");
+        }
+        if (nodes[this.sewingProgress]) {
+            nodes[this.sewingProgress].classList.add("active");
+        }
+
+        this.drawSewingLine();
+
+        if (this.sewingProgress >= data.sewDirs.length) {
+            setTimeout(() => {
+                this.gameState = "grading";
+                this.statusVal2.textContent = "3. 수리 검사";
+                sound.playSuccess();
+                this.setupControls();
+            }, 350);
+        } else {
+            this.setupControls();
+        }
+    }
+
+    drawSewingLine() {
+        const canvas = document.getElementById("sewing-line-overlay");
+        const ctx = canvas.getContext("2d");
+        canvas.width = this.workshop.clientWidth || 600;
+        canvas.height = this.workshop.clientHeight || 500;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const nodes = document.querySelectorAll(".sewing-node");
+        if (!nodes.length) return;
+
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+
+        for (let i = 0; i <= this.sewingProgress; i++) {
+            const node = nodes[i];
+            if (!node) continue;
+            const x = parseFloat(node.style.left);
+            const y = parseFloat(node.style.top);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+
+        ctx.stroke();
+    }
+
+    triggerAIEvaluation() {
+        const finalScore = Math.max(0, 100 - this.assemblyErrors * 18 - this.sewingErrors * 14);
+        const passed = finalScore >= 50;
+
+        this.aiScoreLabel.textContent = `채점 결과: ${finalScore}점`;
+        this.aiExpression.setAttribute("d", passed ? "M 35 55 Q 50 65 65 55" : "M 35 65 Q 50 52 65 65");
+        if (passed) sound.playWin();
+        else sound.playFailure();
+
+        const diagHTML = `
+            <div class="doll-final-summary ${passed ? "pass" : "fail"}">
+                <strong>${finalScore}점</strong>
+                <span>${passed ? "수리 통과" : "다시 수리 필요"}</span>
+            </div>
+            <div class="ai-diag-card">
+                <div class="ai-diag-robot-avatar">🤖</div>
+                <div class="ai-diag-content">
+                    <h4>TV 머리 로봇 수리 검사표</h4>
+                    <p>조립 실수: ${this.assemblyErrors}회, 바느질 실수: ${this.sewingErrors}회<br>
+                    ${passed ? "파츠 이동과 지그재그 봉합이 안정적입니다." : "50점 미만입니다. 파츠 위치와 바늘 방향을 다시 확인해 주세요."}</p>
+                </div>
+            </div>
+        `;
+
+        if (!passed) {
+            this.showOverlay(false, diagHTML, () => this.initLevel(), "다시 수리하기");
+            return;
+        }
+
+        this.showOverlay(true, diagHTML, () => {
+            if (this.level < this.maxLevel) {
+                this.level++;
+                this.initLevel();
+            } else {
+                this.showOverlay(true, `
+                    <div class="doll-final-summary pass">
+                        <strong>수리 완료</strong>
+                        <span>두 인형 모두 건강하게 돌아왔어요.</span>
+                    </div>
+                `, () => app.showDashboard(), "메인으로");
+            }
+        }, this.level < this.maxLevel ? "다음 인형" : "마무리");
+    }
+
+    showToast(msg) {
+        document.querySelectorAll(".doll-toast").forEach(el => el.remove());
+        const toast = document.createElement("div");
+        toast.className = "doll-toast";
+        toast.textContent = msg;
+        this.workshop.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add("fade-out");
+            setTimeout(() => toast.remove(), 250);
+        }, 2400);
+    }
+
+    showOverlay(win, message, action, buttonText = "계속하기") {
+        document.querySelectorAll(".doll-toast").forEach(el => el.remove());
+        const overlay = document.getElementById("game-overlay-screen");
+        const title = document.getElementById("overlay-title");
+        const desc = document.getElementById("overlay-desc");
+        const btn = document.getElementById("overlay-action-btn");
+
+        title.textContent = win ? "최종 합격!" : "수리 보완 필요";
+        title.className = `overlay-title ${win ? "win" : "lose"}`;
+        desc.innerHTML = message;
+        btn.textContent = buttonText;
+        btn.onclick = () => {
+            overlay.classList.remove("active");
+            action();
+        };
+        overlay.classList.add("active");
+    }
+
     cleanup() {
-        document.querySelectorAll('.doll-part-element').forEach(el => el.remove());
-        document.getElementById('sewing-nodes-container').innerHTML = '';
+        document.querySelectorAll('.doll-part-element, .doll-part-ghost-element').forEach(el => el.remove());
+        const nodes = document.getElementById('sewing-nodes-container');
+        if (nodes) nodes.innerHTML = '';
+        const canvas = document.getElementById('sewing-line-overlay');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        if (this.bodyBase) {
+            this.bodyBase.className = 'doll-body-base';
+            this.bodyBase.innerHTML = '';
+        }
     }
 }
 

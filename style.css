@@ -661,7 +661,7 @@ header {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 10;
+    z-index: 60;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -675,7 +675,7 @@ header {
 
 .overlay-card {
     text-align: center;
-    max-width: 400px;
+    max-width: min(520px, calc(100% - 32px));
     padding: 40px;
     background: #1e293b;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1388,6 +1388,463 @@ header {
     pointer-events: none;
 }
 
+.doll-workshop {
+    background:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+        radial-gradient(circle at 50% 42%, rgba(245,158,11,0.12), transparent 34%),
+        radial-gradient(circle, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.94) 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%, 100% 100%;
+    overflow: hidden;
+}
+
+.doll-body-base {
+    width: 300px;
+    height: 390px;
+    top: calc(50% - 185px);
+    left: calc(50% - 150px);
+    border: none;
+    background: transparent;
+    overflow: visible;
+    z-index: 2;
+}
+
+.doll-silhouette {
+    position: absolute;
+    inset: 0;
+    filter: drop-shadow(0 18px 22px rgba(0,0,0,0.38));
+}
+
+.doll-head,
+.doll-body {
+    position: absolute;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--doll-color) 88%, white), var(--doll-color));
+    border: 3px solid rgba(255,255,255,0.18);
+    box-shadow: inset 0 -16px 26px rgba(0,0,0,0.16);
+}
+
+.doll-head {
+    width: 166px;
+    height: 144px;
+    left: 67px;
+    top: 58px;
+    border-radius: 48% 48% 45% 45%;
+    z-index: 2;
+}
+
+.doll-body {
+    width: 172px;
+    height: 188px;
+    left: 64px;
+    top: 184px;
+    border-radius: 46% 46% 40% 40%;
+    z-index: 1;
+}
+
+.doll-rabbit .doll-head {
+    border-radius: 44% 44% 48% 48%;
+}
+
+.doll-face-eye {
+    position: absolute;
+    top: 56px;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: #111827;
+    box-shadow: inset 0 0 0 4px rgba(255,255,255,0.12);
+}
+
+.doll-face-eye.left { left: 48px; }
+.doll-face-eye.right { right: 48px; opacity: 0.28; border: 2px dashed #111827; background: transparent; }
+
+.doll-face-mouth {
+    position: absolute;
+    width: 46px;
+    height: 20px;
+    left: 60px;
+    top: 88px;
+    border-bottom: 4px solid #111827;
+    border-radius: 0 0 40px 40px;
+}
+
+.doll-stitch-wound {
+    position: absolute;
+    width: 88px;
+    height: 58px;
+    left: 42px;
+    top: 58px;
+    border-radius: 20px;
+    border: 2px dashed rgba(248,250,252,0.38);
+    background:
+        linear-gradient(45deg, transparent 46%, rgba(248,250,252,0.5) 47%, rgba(248,250,252,0.5) 53%, transparent 54%),
+        linear-gradient(-45deg, transparent 46%, rgba(248,250,252,0.5) 47%, rgba(248,250,252,0.5) 53%, transparent 54%);
+    background-size: 18px 18px;
+    opacity: 0.55;
+}
+
+.doll-socket {
+    position: absolute;
+    border: 2px dashed rgba(255,255,255,0.24);
+    background: rgba(15,23,42,0.16);
+    z-index: 0;
+}
+
+.doll-socket.ear-left,
+.doll-socket.ear-right {
+    width: 58px;
+    height: 58px;
+    top: 34px;
+    border-radius: 50%;
+}
+
+.doll-socket.ear-left { left: 34px; }
+.doll-socket.ear-right { left: 204px; }
+
+.doll-socket.arm-left,
+.doll-socket.arm-right {
+    width: 46px;
+    height: 86px;
+    top: 204px;
+    border-radius: 999px;
+}
+
+.doll-socket.arm-left { left: 0; }
+.doll-socket.arm-right { right: 0; }
+
+.doll-part-element,
+.doll-part-ghost-element {
+    position: absolute;
+    width: var(--part-w);
+    height: var(--part-h);
+    box-sizing: border-box;
+    transition: left 0.14s ease, top 0.14s ease, transform 0.14s ease, opacity 0.14s ease;
+}
+
+.doll-part-element {
+    z-index: 8;
+    cursor: grab;
+    touch-action: none;
+    filter: drop-shadow(0 8px 18px rgba(0,0,0,0.42));
+}
+
+.doll-part-element.active {
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.72), 0 0 22px rgba(245,158,11,0.78);
+}
+
+.doll-part-element.dragging {
+    cursor: grabbing;
+    transform: scale(1.06);
+    transition: none;
+}
+
+.doll-part-element.placed {
+    pointer-events: none;
+    z-index: 6;
+}
+
+.doll-part-ghost-element {
+    z-index: 3;
+    opacity: 0.48;
+    filter: grayscale(1);
+    pointer-events: none;
+}
+
+.doll-piece {
+    background: linear-gradient(145deg, color-mix(in srgb, var(--part-color) 85%, white), var(--part-color));
+    border: 3px solid rgba(255,255,255,0.24);
+    overflow: hidden;
+}
+
+.doll-part-ghost-element.doll-piece {
+    background: rgba(255,255,255,0.05);
+    border: 2px dashed rgba(255,255,255,0.55);
+}
+
+.doll-piece .piece-detail {
+    position: absolute;
+    display: block;
+}
+
+.piece-ear {
+    border-radius: 50%;
+}
+
+.piece-ear .piece-detail {
+    inset: 13px;
+    border-radius: 50%;
+    background: var(--part-accent);
+    opacity: 0.9;
+}
+
+.piece-rabbit-ear {
+    border-radius: 50% 50% 44% 44%;
+}
+
+.piece-rabbit-ear .piece-detail {
+    inset: 12px 10px 16px;
+    border-radius: 50% 50% 42% 42%;
+    background: var(--part-accent);
+    opacity: 0.86;
+}
+
+.piece-arm {
+    border-radius: 999px;
+}
+
+.piece-arm .piece-detail {
+    left: 50%;
+    bottom: 9px;
+    width: 24px;
+    height: 16px;
+    border-bottom: 3px solid rgba(255,255,255,0.42);
+    border-radius: 0 0 20px 20px;
+    transform: translateX(-50%);
+}
+
+.piece-button {
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f8fafc, #94a3b8 70%);
+    border-color: #fef3c7;
+}
+
+.piece-button .piece-detail,
+.piece-button::before,
+.piece-button::after {
+    content: "";
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #475569;
+}
+
+.piece-button .piece-detail { left: 10px; top: 10px; }
+.piece-button::before { right: 10px; top: 10px; }
+.piece-button::after { left: 15px; bottom: 9px; }
+
+.piece-patch {
+    border-radius: 16px;
+    background:
+        linear-gradient(90deg, rgba(255,255,255,0.26) 50%, transparent 50%),
+        linear-gradient(var(--part-accent), color-mix(in srgb, var(--part-accent) 72%, #f59e0b));
+    background-size: 14px 100%, 100% 100%;
+    border: 3px dashed rgba(255,255,255,0.65);
+}
+
+.piece-patch .piece-detail {
+    inset: 9px;
+    border: 2px dashed rgba(15,23,42,0.28);
+    border-radius: 10px;
+}
+
+.piece-bow {
+    background: transparent;
+    border: none;
+    overflow: visible;
+}
+
+.piece-bow::before,
+.piece-bow::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    width: 34px;
+    height: 30px;
+    background: #ec4899;
+    border: 3px solid rgba(255,255,255,0.32);
+    transform: rotate(45deg);
+}
+
+.piece-bow::before {
+    left: 3px;
+    border-radius: 16px 6px 16px 6px;
+}
+
+.piece-bow::after {
+    right: 3px;
+    border-radius: 6px 16px 6px 16px;
+}
+
+.piece-bow .piece-detail {
+    left: 27px;
+    top: 14px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #be185d;
+    z-index: 2;
+}
+
+.doll-control-title {
+    margin-bottom: 8px;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.doll-control-title span {
+    color: var(--accent);
+}
+
+.doll-control-copy {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-bottom: 10px;
+}
+
+.doll-vector-card {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.doll-vector-card span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+}
+
+.doll-vector-card strong {
+    color: var(--text-main);
+    font-size: 0.92rem;
+}
+
+.doll-vector-card.target strong {
+    color: var(--accent);
+}
+
+.doll-part-queue {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 12px;
+}
+
+.doll-part-pill {
+    border: 1px solid rgba(255,255,255,0.09);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+}
+
+.doll-part-pill.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(245,158,11,0.12);
+}
+
+.doll-part-pill.done {
+    border-color: rgba(16,185,129,0.6);
+    color: #34d399;
+}
+
+.doll-submit-btn {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.sew-pattern {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.sew-pattern span {
+    display: grid;
+    place-items: center;
+    min-height: 42px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 1.35rem;
+    color: var(--text-muted);
+}
+
+.sew-pattern span.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(245,158,11,0.22);
+}
+
+.sew-pattern span.done {
+    color: #34d399;
+    border-color: rgba(16,185,129,0.6);
+}
+
+.sew-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.sewing-node {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.doll-final-summary {
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+.doll-final-summary strong {
+    font-size: 2.8rem;
+    line-height: 1;
+}
+
+.doll-final-summary.pass strong {
+    color: #34d399;
+}
+
+.doll-final-summary.fail strong {
+    color: #f87171;
+}
+
+.doll-final-summary span {
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+.doll-toast {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    max-width: min(360px, calc(100% - 32px));
+    transform: translateX(-50%);
+    background: rgba(15,23,42,0.96);
+    border: 1px solid rgba(129,140,248,0.7);
+    color: #f8fafc;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.45;
+    z-index: 20;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.doll-toast.fade-out {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+}
+
 .repair-part-box {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -1773,4 +2230,3 @@ header {
     font-size: 0.85rem;
     line-height: 1.5;
 }
-
